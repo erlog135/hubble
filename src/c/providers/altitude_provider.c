@@ -1,9 +1,5 @@
 #include "altitude_provider.h"
-#include <math.h>
 #include <stdlib.h>
-
-// The accelerometer reports milli-Gs. 1000 mg ~= 1g.
-#define MG_PER_G 1000
 
 static int16_t s_altitude_deg = 0;
 static AltitudeUpdateHandler s_handler = NULL;
@@ -12,8 +8,15 @@ static int32_t prv_int_sqrt(int32_t v) {
   if (v <= 0) {
     return 0;
   }
-  // Simple integer sqrt using floating sqrt for clarity; v is small (< 32M).
-  return (int32_t)sqrt((double)v);
+
+  // Integer Newton-Raphson square root; avoids libm dependency.
+  int32_t res = v;
+  int32_t prev = 0;
+  while (res != prev) {
+    prev = res;
+    res = (res + v / res) / 2;
+  }
+  return res;
 }
 
 static int16_t prv_calc_altitude_deg(const AccelData *sample) {

@@ -15,6 +15,8 @@ TargetData targeter_get_target(void);
 
 void targeter_set_current_altitude(int16_t altitude_deg);
 int16_t targeter_get_current_altitude(void);
+void targeter_set_current_azimuth(int16_t azimuth_deg);
+int16_t targeter_get_current_azimuth(void);
 
 void targeter_show(void);
 void targeter_hide(void);

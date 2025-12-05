@@ -1,29 +1,38 @@
 #include "targeter.h"
+#include "../providers/altitude_provider.h"
+#include "../providers/azimuth_provider.h"
 
 static Window *s_window;
 static Layer *s_crosshair_layer;
 static TextLayer *s_title_layer;
-static TextLayer *s_alt_layer;
-static TextLayer *s_current_alt_layer;
-static TextLayer *s_az_layer;
+static TextLayer *s_target_layer;
+static TextLayer *s_current_layer;
 
 static TargetData s_target = {0, 0};
 static int16_t s_current_altitude_deg = 0;
+static int16_t s_current_azimuth_deg = 0;
+
+static void prv_on_altitude(int16_t altitude_deg) {
+  targeter_set_current_altitude(altitude_deg);
+}
+
+static void prv_on_azimuth(int16_t azimuth_deg) {
+  targeter_set_current_azimuth(azimuth_deg);
+}
 
 static void prv_update_labels(void) {
-  if (!s_alt_layer || !s_az_layer || !s_current_alt_layer) {
+  if (!s_target_layer || !s_current_layer) {
     return;
   }
 
-  static char s_target_alt_text[24];
-  static char s_current_alt_text[24];
-  static char s_az_text[24];
-  snprintf(s_target_alt_text, sizeof(s_target_alt_text), "Target Alt: %d°", s_target.altitude_deg);
-  snprintf(s_current_alt_text, sizeof(s_current_alt_text), "Current Alt: %d°", s_current_altitude_deg);
-  snprintf(s_az_text, sizeof(s_az_text), "Target Az: %d°", s_target.azimuth_deg);
-  text_layer_set_text(s_alt_layer, s_target_alt_text);
-  text_layer_set_text(s_current_alt_layer, s_current_alt_text);
-  text_layer_set_text(s_az_layer, s_az_text);
+  static char s_target_text[32];
+  static char s_current_text[32];
+  snprintf(s_target_text, sizeof(s_target_text), "Target Alt %d° | Az %d°",
+           s_target.altitude_deg, s_target.azimuth_deg);
+  snprintf(s_current_text, sizeof(s_current_text), "Current Alt %d° | Az %d°",
+           s_current_altitude_deg, s_current_azimuth_deg);
+  text_layer_set_text(s_target_layer, s_target_text);
+  text_layer_set_text(s_current_layer, s_current_text);
 }
 
 static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
@@ -63,35 +72,27 @@ static void prv_window_load(Window *window) {
   text_layer_set_font(s_title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(s_title_layer));
 
-  s_alt_layer = text_layer_create(GRect(0, bounds.size.h - 64, bounds.size.w, 20));
-  text_layer_set_text_alignment(s_alt_layer, GTextAlignmentCenter);
-  text_layer_set_text_color(s_alt_layer, GColorWhite);
-  text_layer_set_background_color(s_alt_layer, GColorClear);
-  text_layer_set_font(s_alt_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-  layer_add_child(window_layer, text_layer_get_layer(s_alt_layer));
+  s_target_layer = text_layer_create(GRect(0, bounds.size.h - 64, bounds.size.w, 20));
+  text_layer_set_text_alignment(s_target_layer, GTextAlignmentCenter);
+  text_layer_set_text_color(s_target_layer, GColorWhite);
+  text_layer_set_background_color(s_target_layer, GColorClear);
+  text_layer_set_font(s_target_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+  layer_add_child(window_layer, text_layer_get_layer(s_target_layer));
 
-  s_current_alt_layer = text_layer_create(GRect(0, bounds.size.h - 44, bounds.size.w, 20));
-  text_layer_set_text_alignment(s_current_alt_layer, GTextAlignmentCenter);
-  text_layer_set_text_color(s_current_alt_layer, GColorWhite);
-  text_layer_set_background_color(s_current_alt_layer, GColorClear);
-  text_layer_set_font(s_current_alt_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-  layer_add_child(window_layer, text_layer_get_layer(s_current_alt_layer));
-
-  s_az_layer = text_layer_create(GRect(0, bounds.size.h - 24, bounds.size.w, 20));
-  text_layer_set_text_alignment(s_az_layer, GTextAlignmentCenter);
-  text_layer_set_text_color(s_az_layer, GColorWhite);
-  text_layer_set_background_color(s_az_layer, GColorClear);
-  text_layer_set_font(s_az_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-  layer_add_child(window_layer, text_layer_get_layer(s_az_layer));
+  s_current_layer = text_layer_create(GRect(0, bounds.size.h - 34, bounds.size.w, 20));
+  text_layer_set_text_alignment(s_current_layer, GTextAlignmentCenter);
+  text_layer_set_text_color(s_current_layer, GColorWhite);
+  text_layer_set_background_color(s_current_layer, GColorClear);
+  text_layer_set_font(s_current_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  layer_add_child(window_layer, text_layer_get_layer(s_current_layer));
 
   prv_update_labels();
 }
 
 static void prv_window_unload(Window *window) {
   text_layer_destroy(s_title_layer);
-  text_layer_destroy(s_alt_layer);
-  text_layer_destroy(s_current_alt_layer);
-  text_layer_destroy(s_az_layer);
+  text_layer_destroy(s_target_layer);
+  text_layer_destroy(s_current_layer);
   layer_destroy(s_crosshair_layer);
 }
 
@@ -106,6 +107,13 @@ void targeter_init(void) {
                                     .load = prv_window_load,
                                     .unload = prv_window_unload,
                                 });
+
+  // Start sensors/providers after window creation so callbacks can update labels.
+  altitude_provider_init();
+  altitude_provider_set_handler(prv_on_altitude);
+
+  azimuth_provider_init();
+  azimuth_provider_set_handler(prv_on_azimuth);
 }
 
 void targeter_deinit(void) {
@@ -113,13 +121,16 @@ void targeter_deinit(void) {
     return;
   }
 
+  azimuth_provider_deinit();
+  altitude_provider_deinit();
+
   window_stack_remove(s_window, false);
   window_destroy(s_window);
   s_window = NULL;
   s_crosshair_layer = NULL;
   s_title_layer = NULL;
-  s_alt_layer = NULL;
-  s_az_layer = NULL;
+  s_target_layer = NULL;
+  s_current_layer = NULL;
 }
 
 void targeter_set_target(int16_t altitude_deg, int16_t azimuth_deg) {
@@ -136,6 +147,13 @@ void targeter_set_current_altitude(int16_t altitude_deg) {
 }
 
 int16_t targeter_get_current_altitude(void) { return s_current_altitude_deg; }
+
+void targeter_set_current_azimuth(int16_t azimuth_deg) {
+  s_current_azimuth_deg = azimuth_deg;
+  prv_update_labels();
+}
+
+int16_t targeter_get_current_azimuth(void) { return s_current_azimuth_deg; }
 
 void targeter_show(void) {
   if (!s_window) {
