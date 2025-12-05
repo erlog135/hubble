@@ -2,9 +2,13 @@
   "name": "Hubble",
   "author": "Logan Head",
   "version": "0.1.0",
-  "keywords": ["pebble-app"],
+  "keywords": [
+    "pebble-app"
+  ],
   "private": true,
-  "dependencies": {},
+  "dependencies": {
+    "astronomy-engine": "^2.1.19"
+  },
   "pebble": {
     "displayName": "Hubble",
     "uuid": "4fca3013-c56a-4870-8629-81b379f917e0",
@@ -25,7 +29,14 @@
       "dummy"
     ],
     "resources": {
-      "media": []
+      "media": [
+        {
+          "type": "bitmap",
+          "name": "MENU_ICON",
+          "file": "Icon_25px.png",
+          "menuIcon": true
+        }
+      ]
     }
   }
 }
