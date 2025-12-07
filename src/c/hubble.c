@@ -1,14 +1,14 @@
 #include <pebble.h>
-#include "windows/targeter.h"
+#include "windows/home.h"
 
 static void prv_init(void) {
-  targeter_init();
-  targeter_show();
+  home_init();
+  home_show();
 }
 
 static void prv_deinit(void) {
-  targeter_hide();
-  targeter_deinit();
+  home_hide();
+  home_deinit();
 }
 
 int main(void) {
