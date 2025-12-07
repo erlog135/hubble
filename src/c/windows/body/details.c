@@ -1,0 +1,287 @@
+#include "details.h"
+#include "../../style.h"
+#include "options.h"
+
+#define HERO_IMAGE_SIZE 80
+#define GRID_MARGIN 6
+#define GRID_ROWS 2
+#define GRID_COLS 2
+
+static Window *s_window;
+static ScrollLayer *s_scroll_layer;
+static Layer *s_image_layer;
+static TextLayer *s_title_layer;
+static TextLayer *s_detail_layer;
+static TextLayer *s_grid_layers[GRID_ROWS][GRID_COLS];
+static TextLayer *s_long_text_layer;
+static GDrawCommandImage *s_pdc_image;
+
+static int16_t s_page_height;
+static bool s_paging_for_top = true;
+static int16_t s_last_offset_y;
+
+static DetailsContent s_content;
+
+static const DetailsContent s_default_content = {
+    .title_text = "Moon",
+    .detail_text = "Waning Crescent",
+    .grid_top_left = "RISE",
+    .grid_top_right = "SET",
+    .grid_bottom_left = "8:00 PM",
+    .grid_bottom_right = "11:30 AM",
+    .long_text =
+        "Earth's Moon is the fifth largest natural satellite in the Solar "
+        "System and the only place beyond Earth where humans have set foot. "
+        "Its phases are driven by its position relative to the Sun and Earth; "
+        "a waning crescent is the final sliver of illumination before the new "
+        "moon, rising late at night and visible in the pre-dawn sky. The Moon "
+        "stabilizes Earth's axial tilt, drives the tides, and continues to be "
+        "a target for exploration.",
+    .image_resource_id = RESOURCE_ID_PLANET_SATURN,
+};
+
+static GSize prv_calc_text_size(const char *text, GFont font, GRect frame) {
+  return graphics_text_layout_get_content_size(text, font, frame,
+                                               GTextOverflowModeWordWrap,
+                                               GTextAlignmentLeft);
+}
+
+static void prv_draw_image(Layer *layer, GContext *ctx) {
+  if (!s_pdc_image) {
+    return;
+  }
+
+  const GRect bounds = layer_get_bounds(layer);
+  const GSize image_bounds = GSize(HERO_IMAGE_SIZE, HERO_IMAGE_SIZE);
+  const GPoint origin = GPoint((bounds.size.w - image_bounds.w) / 2,
+                               (bounds.size.h - image_bounds.h) / 2);
+
+  gdraw_command_image_draw(ctx, s_pdc_image, origin);
+}
+
+static void prv_handle_offset_changed(ScrollLayer *scroll_layer, void *context) {
+  GPoint offset = scroll_layer_get_content_offset(scroll_layer);
+  const bool scrolling_down = offset.y < s_last_offset_y;
+  const bool scrolling_up = offset.y > s_last_offset_y;
+
+  // Paging on the first downward page turn, disabled afterward.
+  if (scrolling_down && s_paging_for_top && offset.y < 0) {
+    scroll_layer_set_paging(scroll_layer, false);
+    s_paging_for_top = false;
+  }
+
+  // When returning toward the top, re-enable paging to snap the final scroll.
+  if (scrolling_up && !s_paging_for_top && offset.y >= -s_page_height) {
+    scroll_layer_set_paging(scroll_layer, true);
+    s_paging_for_top = true;
+  }
+
+  s_last_offset_y = offset.y;
+}
+
+static void prv_select_click_handler(ClickRecognizerRef recognizer, void *context) {
+  options_menu_show();
+}
+
+static void prv_click_config_provider(void *context) {
+  window_single_click_subscribe(BUTTON_ID_SELECT, prv_select_click_handler);
+}
+
+static void prv_create_grid_layers(GRect bounds, GFont font) {
+  const int16_t column_width = (bounds.size.w - GRID_MARGIN * 3) / 2;
+  const int16_t row_height = 20;
+  int16_t y = bounds.origin.y;
+
+  const char *grid_text[GRID_ROWS][GRID_COLS] = {
+      {s_content.grid_top_left, s_content.grid_top_right},
+      {s_content.grid_bottom_left, s_content.grid_bottom_right},
+  };
+
+  for (int row = 0; row < GRID_ROWS; ++row) {
+    int16_t x = GRID_MARGIN;
+    for (int col = 0; col < GRID_COLS; ++col) {
+      GRect frame = GRect(x, y, column_width, row_height);
+      s_grid_layers[row][col] = text_layer_create(frame);
+      text_layer_set_text(s_grid_layers[row][col], grid_text[row][col]);
+      text_layer_set_background_color(s_grid_layers[row][col], GColorClear);
+      text_layer_set_text_color(s_grid_layers[row][col], layout_get()->foreground);
+      text_layer_set_font(s_grid_layers[row][col], font);
+      text_layer_set_overflow_mode(s_grid_layers[row][col], GTextOverflowModeWordWrap);
+      text_layer_set_text_alignment(s_grid_layers[row][col],GTextAlignmentCenter);
+      scroll_layer_add_child(s_scroll_layer,
+                             text_layer_get_layer(s_grid_layers[row][col]));
+
+      x += column_width + GRID_MARGIN;
+    }
+    y += row_height + GRID_MARGIN;
+  }
+}
+
+static void prv_window_load(Window *window) {
+  const Layout *layout = layout_get();
+  Layer *window_layer = window_get_root_layer(window);
+  const GRect bounds = layer_get_bounds(window_layer);
+  s_page_height = bounds.size.h;
+  s_last_offset_y = 0;
+  s_paging_for_top = true;
+
+  s_scroll_layer = scroll_layer_create(bounds);
+  scroll_layer_set_shadow_hidden(s_scroll_layer, true);
+  scroll_layer_set_context(s_scroll_layer, window);
+  scroll_layer_set_callbacks(
+      s_scroll_layer,
+      (ScrollLayerCallbacks){
+          .click_config_provider = prv_click_config_provider,
+          .content_offset_changed_handler = prv_handle_offset_changed,
+      });
+  scroll_layer_set_click_config_onto_window(s_scroll_layer, window);
+  scroll_layer_set_paging(s_scroll_layer, true);
+
+  // Title
+  const int16_t side_margin = GRID_MARGIN;
+  int16_t y_cursor = 6;
+  s_title_layer = text_layer_create(
+      GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 28));
+  text_layer_set_text(s_title_layer, s_content.title_text);
+  text_layer_set_background_color(s_title_layer, GColorClear);
+  text_layer_set_text_color(s_title_layer, layout->foreground);
+  text_layer_set_font(s_title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(s_title_layer, GTextAlignmentCenter);
+  scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_title_layer));
+
+  y_cursor += 30;
+
+  // Hero image
+  s_pdc_image = gdraw_command_image_create_with_resource(s_content.image_resource_id);
+  s_image_layer = layer_create(GRect(0, y_cursor, bounds.size.w, HERO_IMAGE_SIZE + 12));
+  layer_set_update_proc(s_image_layer, prv_draw_image);
+  scroll_layer_add_child(s_scroll_layer, s_image_layer);
+  y_cursor += HERO_IMAGE_SIZE + 18;
+
+  // Detail text
+  const GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
+  const GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 60);
+  s_detail_layer = text_layer_create(detail_frame);
+  text_layer_set_text(s_detail_layer, s_content.detail_text);
+  text_layer_set_background_color(s_detail_layer, GColorClear);
+  text_layer_set_text_color(s_detail_layer, layout->foreground);
+  text_layer_set_font(s_detail_layer, detail_font);
+  text_layer_set_overflow_mode(s_detail_layer, GTextOverflowModeWordWrap);
+  text_layer_set_text_alignment(s_detail_layer, GTextAlignmentCenter);
+  scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_detail_layer));
+
+  y_cursor += 64;
+
+  // Grid values (2x2)
+  const GRect grid_bounds = GRect(0, y_cursor, bounds.size.w, 2 * 20 + GRID_MARGIN);
+  prv_create_grid_layers(grid_bounds, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+  y_cursor += grid_bounds.size.h + GRID_MARGIN;
+
+  // Long-form text after the first "page"
+  const GFont long_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
+  GRect long_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 2000);
+  const GSize long_size = prv_calc_text_size(s_content.long_text, long_font, long_frame);
+  long_frame.size.h = long_size.h;
+
+  s_long_text_layer = text_layer_create(long_frame);
+  text_layer_set_text(s_long_text_layer, s_content.long_text);
+  text_layer_set_background_color(s_long_text_layer, GColorClear);
+  text_layer_set_text_color(s_long_text_layer, layout->foreground);
+  text_layer_set_font(s_long_text_layer, long_font);
+  text_layer_set_overflow_mode(s_long_text_layer, GTextOverflowModeWordWrap);
+  text_layer_set_text_alignment(s_long_text_layer, GTextAlignmentLeft);
+  scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_long_text_layer));
+
+  y_cursor += long_size.h + GRID_MARGIN;
+
+  // Ensure at least two screens of scrollable content.
+  const int16_t min_height = s_page_height * 2;
+  const int16_t content_height = y_cursor > min_height ? y_cursor : min_height;
+  scroll_layer_set_content_size(s_scroll_layer, GSize(bounds.size.w, content_height));
+
+  layer_add_child(window_layer, scroll_layer_get_layer(s_scroll_layer));
+}
+
+static void prv_window_unload(Window *window) {
+  for (int row = 0; row < GRID_ROWS; ++row) {
+    for (int col = 0; col < GRID_COLS; ++col) {
+      if (s_grid_layers[row][col]) {
+        text_layer_destroy(s_grid_layers[row][col]);
+        s_grid_layers[row][col] = NULL;
+      }
+    }
+  }
+
+  if (s_long_text_layer) {
+    text_layer_destroy(s_long_text_layer);
+    s_long_text_layer = NULL;
+  }
+  if (s_detail_layer) {
+    text_layer_destroy(s_detail_layer);
+    s_detail_layer = NULL;
+  }
+  if (s_title_layer) {
+    text_layer_destroy(s_title_layer);
+    s_title_layer = NULL;
+  }
+  if (s_image_layer) {
+    layer_destroy(s_image_layer);
+    s_image_layer = NULL;
+  }
+  if (s_pdc_image) {
+    gdraw_command_image_destroy(s_pdc_image);
+    s_pdc_image = NULL;
+  }
+  if (s_scroll_layer) {
+    scroll_layer_destroy(s_scroll_layer);
+    s_scroll_layer = NULL;
+  }
+}
+
+void details_init(void) {
+  if (s_window) {
+    return;
+  }
+
+  s_content = s_default_content;
+  s_window = window_create();
+  window_set_background_color(s_window, layout_get()->background);
+  window_set_window_handlers(s_window, (WindowHandlers){
+                                        .load = prv_window_load,
+                                        .unload = prv_window_unload,
+                                    });
+}
+
+void details_deinit(void) {
+  if (!s_window) {
+    return;
+  }
+
+  window_stack_remove(s_window, false);
+  window_destroy(s_window);
+  s_window = NULL;
+  s_scroll_layer = NULL;
+  s_image_layer = NULL;
+  s_title_layer = NULL;
+  s_detail_layer = NULL;
+  s_long_text_layer = NULL;
+  s_pdc_image = NULL;
+}
+
+void details_show(const DetailsContent *content) {
+  if (!s_window) {
+    details_init();
+  }
+  //we don't have any real content yet, so we'll just use the default content
+  s_content = s_default_content;
+//   if (content) {
+//     s_content = *content;
+//   }
+  window_stack_push(s_window, true);
+}
+
+void details_hide(void) {
+  if (s_window) {
+    window_stack_remove(s_window, true);
+  }
+}

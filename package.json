@@ -35,6 +35,11 @@
           "name": "MENU_ICON",
           "file": "Icon_25px.png",
           "menuIcon": true
+        },
+        {
+          "type": "raw",
+          "name": "PLANET_SATURN",
+          "file": "planets/Saturn.pdc"
         }
       ]
     }

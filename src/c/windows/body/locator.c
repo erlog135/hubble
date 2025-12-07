@@ -1,6 +1,6 @@
-#include "targeter.h"
-#include "../providers/altitude_provider.h"
-#include "../providers/azimuth_provider.h"
+#include "locator.h"
+#include "../../providers/altitude_provider.h"
+#include "../../providers/azimuth_provider.h"
 
 static Window *s_window;
 static Layer *s_crosshair_layer;
@@ -24,11 +24,11 @@ static int16_t prv_normalize_azimuth_delta(int16_t delta) {
 }
 
 static void prv_on_altitude(int16_t altitude_deg) {
-  targeter_set_current_altitude(altitude_deg);
+  locator_set_current_altitude(altitude_deg);
 }
 
 static void prv_on_azimuth(int16_t azimuth_deg) {
-  targeter_set_current_azimuth(azimuth_deg);
+  locator_set_current_azimuth(azimuth_deg);
 }
 
 static void prv_update_labels(void) {
@@ -128,7 +128,7 @@ static void prv_window_unload(Window *window) {
   layer_destroy(s_crosshair_layer);
 }
 
-void targeter_init(void) {
+void locator_init(void) {
   if (s_window) {
     return;
   }
@@ -148,7 +148,7 @@ void targeter_init(void) {
   azimuth_provider_set_handler(prv_on_azimuth);
 }
 
-void targeter_deinit(void) {
+void locator_deinit(void) {
   if (!s_window) {
     return;
   }
@@ -165,36 +165,36 @@ void targeter_deinit(void) {
   s_current_layer = NULL;
 }
 
-void targeter_set_target(int16_t altitude_deg, int16_t azimuth_deg) {
+void locator_set_target(int16_t altitude_deg, int16_t azimuth_deg) {
   s_target.altitude_deg = altitude_deg;
   s_target.azimuth_deg = azimuth_deg;
   prv_update_labels();
 }
 
-TargetData targeter_get_target(void) { return s_target; }
+TargetData locator_get_target(void) { return s_target; }
 
-void targeter_set_current_altitude(int16_t altitude_deg) {
+void locator_set_current_altitude(int16_t altitude_deg) {
   s_current_altitude_deg = altitude_deg;
   prv_update_labels();
 }
 
-int16_t targeter_get_current_altitude(void) { return s_current_altitude_deg; }
+int16_t locator_get_current_altitude(void) { return s_current_altitude_deg; }
 
-void targeter_set_current_azimuth(int16_t azimuth_deg) {
+void locator_set_current_azimuth(int16_t azimuth_deg) {
   s_current_azimuth_deg = azimuth_deg;
   prv_update_labels();
 }
 
-int16_t targeter_get_current_azimuth(void) { return s_current_azimuth_deg; }
+int16_t locator_get_current_azimuth(void) { return s_current_azimuth_deg; }
 
-void targeter_show(void) {
+void locator_show(void) {
   if (!s_window) {
-    targeter_init();
+    locator_init();
   }
   window_stack_push(s_window, true);
 }
 
-void targeter_hide(void) {
+void locator_hide(void) {
   if (s_window) {
     window_stack_remove(s_window, true);
   }

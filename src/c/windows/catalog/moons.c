@@ -1,26 +1,20 @@
-#include "catalog.h"
+ 
 #include "moons.h"
+#include "../body/details.h"
 #include "../../style.h"
+
+#define MOON_COUNT 5
 
 static Window *s_window;
 static SimpleMenuLayer *s_menu_layer;
 static SimpleMenuSection s_menu_sections[1];
-static SimpleMenuItem s_menu_items[4];
+static SimpleMenuItem s_menu_items[MOON_COUNT];
 static StatusBarLayer *s_status_layer;
 static GBitmap *s_menu_icon;
 
 static void prv_menu_select_callback(int index, void *context) {
-  
-  APP_LOG(APP_LOG_LEVEL_INFO, "Catalog menu selected: %s", s_menu_items[index].title);
-
-  switch (index) {
-    case 0:  // Moons
-      moons_menu_show();
-      break;
-    default:
-      vibes_short_pulse();
-      break;
-  }
+  APP_LOG(APP_LOG_LEVEL_INFO, "Moons menu selected: %s", s_menu_items[index].title);
+  details_show(NULL);
 }
 
 static void prv_window_load(Window *window) {
@@ -38,22 +32,27 @@ static void prv_window_load(Window *window) {
   }
 
   s_menu_items[0] = (SimpleMenuItem){
-      .title = "Moons",
+      .title = "Moon (Earth)",
       .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
   s_menu_items[1] = (SimpleMenuItem){
-      .title = "Planets",
+      .title = "Io",
       .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
   s_menu_items[2] = (SimpleMenuItem){
-      .title = "Stars",
+      .title = "Europa",
       .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
   s_menu_items[3] = (SimpleMenuItem){
-      .title = "Constellations",
+      .title = "Ganymede",
+      .icon = s_menu_icon,
+      .callback = prv_menu_select_callback,
+  };
+  s_menu_items[4] = (SimpleMenuItem){
+      .title = "Callisto",
       .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
@@ -86,7 +85,7 @@ static void prv_window_unload(Window *window) {
   }
 }
 
-void catalog_menu_init(void) {
+void moons_menu_init(void) {
   if (s_window) {
     return;
   }
@@ -99,7 +98,7 @@ void catalog_menu_init(void) {
                                 });
 }
 
-void catalog_menu_deinit(void) {
+void moons_menu_deinit(void) {
   if (!s_window) {
     return;
   }
@@ -116,14 +115,14 @@ void catalog_menu_deinit(void) {
   }
 }
 
-void catalog_menu_show(void) {
+void moons_menu_show(void) {
   if (!s_window) {
-    catalog_menu_init();
+    moons_menu_init();
   }
   window_stack_push(s_window, true);
 }
 
-void catalog_menu_hide(void) {
+void moons_menu_hide(void) {
   if (s_window) {
     window_stack_remove(s_window, true);
   }

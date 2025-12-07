@@ -42,7 +42,7 @@ static void prv_accel_handler(AccelRawData *data, uint32_t num_samples,
 
 void altitude_provider_init(void) {
   accel_raw_data_service_subscribe(1, prv_accel_handler);
-  accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
+  accel_service_set_sampling_rate(ACCEL_SAMPLING_10HZ);
   s_altitude_deg = 0;
 }
 
