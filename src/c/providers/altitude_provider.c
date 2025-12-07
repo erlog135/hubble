@@ -1,48 +1,33 @@
 #include "altitude_provider.h"
-#include <stdlib.h>
-
 static int16_t s_altitude_deg = 0;
 static AltitudeUpdateHandler s_handler = NULL;
 
-static int32_t prv_int_sqrt(int32_t v) {
-  if (v <= 0) {
-    return 0;
-  }
-
-  // Integer Newton-Raphson square root; avoids libm dependency.
-  int32_t res = v;
-  int32_t prev = 0;
-  while (res != prev) {
-    prev = res;
-    res = (res + v / res) / 2;
-  }
-  return res;
+static int32_t prv_trig_to_signed_deg(int32_t trig_angle) {
+  int32_t deg = TRIGANGLE_TO_DEG(trig_angle);
+  return (deg > 180) ? deg - 360 : deg;
 }
 
-static int16_t prv_calc_altitude_deg(const AccelData *sample) {
-  const int32_t y = sample->y;  // milli-G
-  const int32_t x = sample->x;
-  const int32_t z = sample->z;
+static int16_t prv_calc_altitude_deg(const AccelRawData *sample) {
+  // Ignore X; assume watch is held parallel to line of sight.
+  // Altitude is measured from looking straight ahead (0°) up to +90° (up) and
+  // down to -90° (down) using Z (up) and Y (forward/back).
+  const int32_t y = sample->y;  // milli-G, forward is negative
+  const int32_t z = sample->z;  // milli-G, up is positive
 
-  // Use y magnitude against horizontal magnitude to infer tilt angle.
-  const int32_t horiz = prv_int_sqrt((x * x) + (z * z));
-  const int32_t safe_horiz = horiz == 0 ? 1 : horiz;
+  const int32_t trig_angle = atan2_lookup(z, -y);  // (-y) makes forward = 0°
+  int32_t deg = prv_trig_to_signed_deg(trig_angle);
 
-  // atan2_lookup returns a TRIG angle; convert to degrees.
-  const int32_t trig_angle = atan2_lookup(abs(y), safe_horiz);
-  int32_t deg = TRIGANGLE_TO_DEG(trig_angle);
-
-  // We only care about 0-90° (horizon to straight up).
   if (deg > 90) {
     deg = 90;
-  } else if (deg < 0) {
-    deg = 0;
+  } else if (deg < -90) {
+    deg = -90;
   }
 
   return (int16_t)deg;
 }
 
-static void prv_accel_handler(AccelData *data, uint32_t num_samples) {
+static void prv_accel_handler(AccelRawData *data, uint32_t num_samples,
+                              uint64_t timestamp) {
   if (num_samples == 0) {
     return;
   }
@@ -56,8 +41,8 @@ static void prv_accel_handler(AccelData *data, uint32_t num_samples) {
 }
 
 void altitude_provider_init(void) {
-  accel_data_service_subscribe(1, prv_accel_handler);
-  accel_service_set_sampling_rate(ACCEL_SAMPLING_10HZ);
+  accel_raw_data_service_subscribe(1, prv_accel_handler);
+  accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
   s_altitude_deg = 0;
 }
 

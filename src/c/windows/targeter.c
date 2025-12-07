@@ -8,9 +8,20 @@ static TextLayer *s_title_layer;
 static TextLayer *s_target_layer;
 static TextLayer *s_current_layer;
 
-static TargetData s_target = {0, 0};
+static TargetData s_target = {42, 245};
 static int16_t s_current_altitude_deg = 0;
 static int16_t s_current_azimuth_deg = 0;
+
+static int16_t prv_normalize_azimuth_delta(int16_t delta) {
+  // Wrap into [-180, 180] for smallest rotation distance.
+  while (delta > 180) {
+    delta -= 360;
+  }
+  while (delta < -180) {
+    delta += 360;
+  }
+  return delta;
+}
 
 static void prv_on_altitude(int16_t altitude_deg) {
   targeter_set_current_altitude(altitude_deg);
@@ -29,7 +40,7 @@ static void prv_update_labels(void) {
   static char s_current_text[32];
   snprintf(s_target_text, sizeof(s_target_text), "Target Alt %d° | Az %d°",
            s_target.altitude_deg, s_target.azimuth_deg);
-  snprintf(s_current_text, sizeof(s_current_text), "Current Alt %d° | Az %d°",
+  snprintf(s_current_text, sizeof(s_current_text), "My Alt %d° | Az %d°",
            s_current_altitude_deg, s_current_azimuth_deg);
   text_layer_set_text(s_target_layer, s_target_text);
   text_layer_set_text(s_current_layer, s_current_text);
@@ -54,6 +65,27 @@ static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
 
   // Small center dot
   graphics_fill_circle(ctx, center, 2);
+
+  // Target indicator: offset from center by current vs. target deltas.
+  const int16_t delta_alt = s_target.altitude_deg - s_current_altitude_deg;
+  const int16_t delta_az = prv_normalize_azimuth_delta(s_target.azimuth_deg - s_current_azimuth_deg);
+
+  // Map degrees to pixels using the crosshair radius; clamp to stay on the reticle.
+  const int16_t max_span_deg = 90;  // map +/-90° to full radius
+  int16_t dx = (int16_t)((radius * delta_az) / max_span_deg);
+  int16_t dy = (int16_t)((-radius * delta_alt) / max_span_deg);  // negative to move up for positive altitude
+  if (dx > (int16_t)radius) dx = radius;
+  if (dx < -(int16_t)radius) dx = -(int16_t)radius;
+  if (dy > (int16_t)radius) dy = radius;
+  if (dy < -(int16_t)radius) dy = -(int16_t)radius;
+
+  const uint16_t target_radius = radius / 6 > 2 ? radius / 6 : 2;
+  GPoint target_center = GPoint(center.x + dx, center.y + dy);
+
+  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_fill_circle(ctx, target_center, target_radius);
+  graphics_context_set_stroke_color(ctx, GColorBlack);
+  graphics_draw_circle(ctx, target_center, target_radius);
 }
 
 static void prv_window_load(Window *window) {
