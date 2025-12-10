@@ -2,10 +2,17 @@
 #include "../../style.h"
 #include "options.h"
 
-#define HERO_IMAGE_SIZE 80
-#define GRID_MARGIN 6
+#define HERO_IMAGE_SIZE 50
+#define GRID_MARGIN 4
 #define GRID_ROWS 2
 #define GRID_COLS 2
+#define GRID_ROW_HEIGHT 18
+#define TITLE_TOP_MARGIN 2
+#define TITLE_BOTTOM_MARGIN 4
+#define HERO_IMAGE_FRAME_PADDING 6
+#define HERO_IMAGE_BOTTOM_MARGIN 6
+#define DETAIL_BOTTOM_MARGIN 6
+#define LONG_TEXT_TOP_MARGIN 8
 
 static Window *s_window;
 static ScrollLayer *s_scroll_layer;
@@ -15,11 +22,9 @@ static TextLayer *s_detail_layer;
 static TextLayer *s_grid_layers[GRID_ROWS][GRID_COLS];
 static TextLayer *s_long_text_layer;
 static GDrawCommandImage *s_pdc_image;
+static StatusBarLayer *s_status_layer;
 
 static int16_t s_page_height;
-static bool s_paging_for_top = true;
-static int16_t s_last_offset_y;
-
 static DetailsContent s_content;
 
 static const DetailsContent s_default_content = {
@@ -37,7 +42,7 @@ static const DetailsContent s_default_content = {
         "moon, rising late at night and visible in the pre-dawn sky. The Moon "
         "stabilizes Earth's axial tilt, drives the tides, and continues to be "
         "a target for exploration.",
-    .image_resource_id = RESOURCE_ID_PLANET_SATURN,
+    .image_resource_id = RESOURCE_ID_MOON,
 };
 
 static GSize prv_calc_text_size(const char *text, GFont font, GRect frame) {
@@ -59,37 +64,46 @@ static void prv_draw_image(Layer *layer, GContext *ctx) {
   gdraw_command_image_draw(ctx, s_pdc_image, origin);
 }
 
-static void prv_handle_offset_changed(ScrollLayer *scroll_layer, void *context) {
-  GPoint offset = scroll_layer_get_content_offset(scroll_layer);
-  const bool scrolling_down = offset.y < s_last_offset_y;
-  const bool scrolling_up = offset.y > s_last_offset_y;
-
-  // Paging on the first downward page turn, disabled afterward.
-  if (scrolling_down && s_paging_for_top && offset.y < 0) {
-    scroll_layer_set_paging(scroll_layer, false);
-    s_paging_for_top = false;
-  }
-
-  // When returning toward the top, re-enable paging to snap the final scroll.
-  if (scrolling_up && !s_paging_for_top && offset.y >= -s_page_height) {
-    scroll_layer_set_paging(scroll_layer, true);
-    s_paging_for_top = true;
-  }
-
-  s_last_offset_y = offset.y;
-}
-
 static void prv_select_click_handler(ClickRecognizerRef recognizer, void *context) {
   options_menu_show();
 }
 
+static void prv_scroll_up_handler(ClickRecognizerRef recognizer, void *context) {
+  ScrollLayer *scroll_layer = (ScrollLayer *)context;
+  if (!scroll_layer) {
+    return;
+  }
+
+  const GPoint offset = scroll_layer_get_content_offset(scroll_layer);
+  const bool within_one_screen = offset.y >= -s_page_height;
+  scroll_layer_set_paging(scroll_layer, within_one_screen);
+  scroll_layer_scroll_up_click_handler(recognizer, scroll_layer);
+}
+
+static void prv_scroll_down_handler(ClickRecognizerRef recognizer, void *context) {
+  ScrollLayer *scroll_layer = (ScrollLayer *)context;
+  if (!scroll_layer) {
+    return;
+  }
+
+  const GPoint offset = scroll_layer_get_content_offset(scroll_layer);
+  scroll_layer_set_paging(scroll_layer, offset.y == 0);
+  scroll_layer_scroll_down_click_handler(recognizer, scroll_layer);
+}
+
 static void prv_click_config_provider(void *context) {
+  ScrollLayer *scroll_layer = (ScrollLayer *)context;
   window_single_click_subscribe(BUTTON_ID_SELECT, prv_select_click_handler);
+  window_single_click_subscribe(BUTTON_ID_UP, prv_scroll_up_handler);
+  window_single_click_subscribe(BUTTON_ID_DOWN, prv_scroll_down_handler);
+  // Keep repeating up/down behavior consistent with defaults.
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, prv_scroll_up_handler);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, prv_scroll_down_handler);
 }
 
 static void prv_create_grid_layers(GRect bounds, GFont font) {
   const int16_t column_width = (bounds.size.w - GRID_MARGIN * 3) / 2;
-  const int16_t row_height = 20;
+  const int16_t row_height = GRID_ROW_HEIGHT;
   int16_t y = bounds.origin.y;
 
   const char *grid_text[GRID_ROWS][GRID_COLS] = {
@@ -122,45 +136,58 @@ static void prv_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
   s_page_height = bounds.size.h;
-  s_last_offset_y = 0;
-  s_paging_for_top = true;
 
-  s_scroll_layer = scroll_layer_create(bounds);
+  s_status_layer = status_bar_layer_create();
+  status_bar_layer_set_colors(s_status_layer, layout->background, layout->foreground);
+  layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
+
+  const GRect scroll_bounds = GRect(bounds.origin.x,
+                                    bounds.origin.y + STATUS_BAR_LAYER_HEIGHT,
+                                    bounds.size.w, bounds.size.h - STATUS_BAR_LAYER_HEIGHT);
+  s_scroll_layer = scroll_layer_create(scroll_bounds);
   scroll_layer_set_shadow_hidden(s_scroll_layer, true);
-  scroll_layer_set_context(s_scroll_layer, window);
+  scroll_layer_set_context(s_scroll_layer, s_scroll_layer);
   scroll_layer_set_callbacks(
       s_scroll_layer,
       (ScrollLayerCallbacks){
           .click_config_provider = prv_click_config_provider,
-          .content_offset_changed_handler = prv_handle_offset_changed,
       });
   scroll_layer_set_click_config_onto_window(s_scroll_layer, window);
   scroll_layer_set_paging(s_scroll_layer, true);
 
   // Title
   const int16_t side_margin = GRID_MARGIN;
-  int16_t y_cursor = 6;
-  s_title_layer = text_layer_create(
-      GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 28));
+  int16_t y_cursor = TITLE_TOP_MARGIN;
+  const GFont title_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+  GRect title_frame =
+      GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 28);
+  const GSize title_size =
+      prv_calc_text_size(s_content.title_text, title_font, title_frame);
+  title_frame.size.h = title_size.h > 0 ? title_size.h : 20;
+  s_title_layer = text_layer_create(title_frame);
   text_layer_set_text(s_title_layer, s_content.title_text);
   text_layer_set_background_color(s_title_layer, GColorClear);
   text_layer_set_text_color(s_title_layer, layout->foreground);
-  text_layer_set_font(s_title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_font(s_title_layer, title_font);
   text_layer_set_text_alignment(s_title_layer, GTextAlignmentCenter);
   scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_title_layer));
 
-  y_cursor += 30;
+  y_cursor += title_frame.size.h + TITLE_BOTTOM_MARGIN;
 
   // Hero image
   s_pdc_image = gdraw_command_image_create_with_resource(s_content.image_resource_id);
-  s_image_layer = layer_create(GRect(0, y_cursor, bounds.size.w, HERO_IMAGE_SIZE + 12));
+  const int16_t image_layer_height = HERO_IMAGE_SIZE + HERO_IMAGE_FRAME_PADDING;
+  s_image_layer = layer_create(GRect(0, y_cursor, bounds.size.w, image_layer_height));
   layer_set_update_proc(s_image_layer, prv_draw_image);
   scroll_layer_add_child(s_scroll_layer, s_image_layer);
-  y_cursor += HERO_IMAGE_SIZE + 18;
+  y_cursor += image_layer_height + HERO_IMAGE_BOTTOM_MARGIN;
 
   // Detail text
   const GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
-  const GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 60);
+  GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 60);
+  const GSize detail_size =
+      prv_calc_text_size(s_content.detail_text, detail_font, detail_frame);
+  detail_frame.size.h = detail_size.h > 0 ? detail_size.h : 20;
   s_detail_layer = text_layer_create(detail_frame);
   text_layer_set_text(s_detail_layer, s_content.detail_text);
   text_layer_set_background_color(s_detail_layer, GColorClear);
@@ -170,12 +197,13 @@ static void prv_window_load(Window *window) {
   text_layer_set_text_alignment(s_detail_layer, GTextAlignmentCenter);
   scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_detail_layer));
 
-  y_cursor += 64;
+  y_cursor += detail_frame.size.h + DETAIL_BOTTOM_MARGIN;
 
   // Grid values (2x2)
-  const GRect grid_bounds = GRect(0, y_cursor, bounds.size.w, 2 * 20 + GRID_MARGIN);
+  const GRect grid_bounds =
+      GRect(0, y_cursor, bounds.size.w, GRID_ROW_HEIGHT * GRID_ROWS + GRID_MARGIN);
   prv_create_grid_layers(grid_bounds, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
-  y_cursor += grid_bounds.size.h + GRID_MARGIN;
+  y_cursor += grid_bounds.size.h + LONG_TEXT_TOP_MARGIN;
 
   // Long-form text after the first "page"
   const GFont long_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
@@ -232,6 +260,10 @@ static void prv_window_unload(Window *window) {
     gdraw_command_image_destroy(s_pdc_image);
     s_pdc_image = NULL;
   }
+  if (s_status_layer) {
+    status_bar_layer_destroy(s_status_layer);
+    s_status_layer = NULL;
+  }
   if (s_scroll_layer) {
     scroll_layer_destroy(s_scroll_layer);
     s_scroll_layer = NULL;
@@ -266,6 +298,7 @@ void details_deinit(void) {
   s_detail_layer = NULL;
   s_long_text_layer = NULL;
   s_pdc_image = NULL;
+  s_status_layer = NULL;
 }
 
 void details_show(const DetailsContent *content) {

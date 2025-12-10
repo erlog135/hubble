@@ -1,12 +1,14 @@
 #include "locator.h"
 #include "../../providers/altitude_provider.h"
 #include "../../providers/azimuth_provider.h"
+#include "../../style.h"
 
 static Window *s_window;
 static Layer *s_crosshair_layer;
 static TextLayer *s_title_layer;
 static TextLayer *s_target_layer;
 static TextLayer *s_current_layer;
+static StatusBarLayer *s_status_layer;
 
 static TargetData s_target = {42, 245};
 static int16_t s_current_altitude_deg = 0;
@@ -89,14 +91,23 @@ static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
 }
 
 static void prv_window_load(Window *window) {
+  const Layout *layout = layout_get();
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
 
-  s_crosshair_layer = layer_create(bounds);
+  s_status_layer = status_bar_layer_create();
+  status_bar_layer_set_colors(s_status_layer, layout->background, layout->foreground);
+  layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
+
+  const GRect content_bounds =
+      GRect(bounds.origin.x, bounds.origin.y + STATUS_BAR_LAYER_HEIGHT,
+           bounds.size.w, bounds.size.h - STATUS_BAR_LAYER_HEIGHT);
+
+  s_crosshair_layer = layer_create(content_bounds);
   layer_set_update_proc(s_crosshair_layer, prv_draw_crosshair);
   layer_add_child(window_layer, s_crosshair_layer);
 
-  s_title_layer = text_layer_create(GRect(0, 8, bounds.size.w, 24));
+  s_title_layer = text_layer_create(GRect(0, 8, content_bounds.size.w, 24));
   text_layer_set_text_alignment(s_title_layer, GTextAlignmentCenter);
   text_layer_set_text(s_title_layer, "Targeter");
   text_layer_set_text_color(s_title_layer, GColorWhite);
@@ -104,14 +115,14 @@ static void prv_window_load(Window *window) {
   text_layer_set_font(s_title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(s_title_layer));
 
-  s_target_layer = text_layer_create(GRect(0, bounds.size.h - 64, bounds.size.w, 20));
+  s_target_layer = text_layer_create(GRect(0, content_bounds.size.h - 64, content_bounds.size.w, 20));
   text_layer_set_text_alignment(s_target_layer, GTextAlignmentCenter);
   text_layer_set_text_color(s_target_layer, GColorWhite);
   text_layer_set_background_color(s_target_layer, GColorClear);
   text_layer_set_font(s_target_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(s_target_layer));
 
-  s_current_layer = text_layer_create(GRect(0, bounds.size.h - 34, bounds.size.w, 20));
+  s_current_layer = text_layer_create(GRect(0, content_bounds.size.h - 34, content_bounds.size.w, 20));
   text_layer_set_text_alignment(s_current_layer, GTextAlignmentCenter);
   text_layer_set_text_color(s_current_layer, GColorWhite);
   text_layer_set_background_color(s_current_layer, GColorClear);
@@ -126,6 +137,7 @@ static void prv_window_unload(Window *window) {
   text_layer_destroy(s_target_layer);
   text_layer_destroy(s_current_layer);
   layer_destroy(s_crosshair_layer);
+  status_bar_layer_destroy(s_status_layer);
 }
 
 void locator_init(void) {
@@ -163,6 +175,7 @@ void locator_deinit(void) {
   s_title_layer = NULL;
   s_target_layer = NULL;
   s_current_layer = NULL;
+  s_status_layer = NULL;
 }
 
 void locator_set_target(int16_t altitude_deg, int16_t azimuth_deg) {
