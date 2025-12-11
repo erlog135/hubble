@@ -5,9 +5,8 @@
 static Window *s_window;
 static SimpleMenuLayer *s_menu_layer;
 static SimpleMenuSection s_menu_sections[1];
-static SimpleMenuItem s_menu_items[4];
+static SimpleMenuItem s_menu_items[5];
 static StatusBarLayer *s_status_layer;
-static GBitmap *s_menu_icon;
 
 static void prv_menu_select_callback(int index, void *context) {
   
@@ -33,28 +32,26 @@ static void prv_window_load(Window *window) {
   status_bar_layer_set_colors(s_status_layer, layout->background, layout->foreground);
   layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
 
-  if (!s_menu_icon) {
-    s_menu_icon = gbitmap_create_with_resource(RESOURCE_ID_MENU_ICON);
-  }
-
   s_menu_items[0] = (SimpleMenuItem){
       .title = "Moons",
-      .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
   s_menu_items[1] = (SimpleMenuItem){
       .title = "Planets",
-      .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
   s_menu_items[2] = (SimpleMenuItem){
       .title = "Stars",
-      .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
   s_menu_items[3] = (SimpleMenuItem){
       .title = "Constellations",
-      .icon = s_menu_icon,
+      .subtitle = "Zodiac",
+      .callback = prv_menu_select_callback,
+  };
+  s_menu_items[4] = (SimpleMenuItem){
+      .title = "Constellations",
+      .subtitle = "Other",
       .callback = prv_menu_select_callback,
   };
 
@@ -79,11 +76,6 @@ static void prv_window_unload(Window *window) {
 
   status_bar_layer_destroy(s_status_layer);
   s_status_layer = NULL;
-
-  if (s_menu_icon) {
-    gbitmap_destroy(s_menu_icon);
-    s_menu_icon = NULL;
-  }
 }
 
 void catalog_menu_init(void) {
@@ -109,11 +101,6 @@ void catalog_menu_deinit(void) {
   s_window = NULL;
   s_menu_layer = NULL;
   s_status_layer = NULL;
-
-  if (s_menu_icon) {
-    gbitmap_destroy(s_menu_icon);
-    s_menu_icon = NULL;
-  }
 }
 
 void catalog_menu_show(void) {

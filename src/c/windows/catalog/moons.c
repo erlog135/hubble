@@ -10,7 +10,6 @@ static SimpleMenuLayer *s_menu_layer;
 static SimpleMenuSection s_menu_sections[1];
 static SimpleMenuItem s_menu_items[MOON_COUNT];
 static StatusBarLayer *s_status_layer;
-static GBitmap *s_menu_icon;
 
 static void prv_menu_select_callback(int index, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Moons menu selected: %s", s_menu_items[index].title);
@@ -25,35 +24,29 @@ static void prv_window_load(Window *window) {
 
   s_status_layer = status_bar_layer_create();
   status_bar_layer_set_colors(s_status_layer, layout->background, layout->foreground);
+
+  //why cant i use status_bar_layer_set_title? lame
+  
   layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
 
-  if (!s_menu_icon) {
-    s_menu_icon = gbitmap_create_with_resource(RESOURCE_ID_MENU_ICON);
-  }
-
   s_menu_items[0] = (SimpleMenuItem){
-      .title = "Moon (Earth)",
-      .icon = s_menu_icon,
+      .title = "The Moon",
       .callback = prv_menu_select_callback,
   };
   s_menu_items[1] = (SimpleMenuItem){
       .title = "Io",
-      .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
   s_menu_items[2] = (SimpleMenuItem){
       .title = "Europa",
-      .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
   s_menu_items[3] = (SimpleMenuItem){
       .title = "Ganymede",
-      .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
   s_menu_items[4] = (SimpleMenuItem){
       .title = "Callisto",
-      .icon = s_menu_icon,
       .callback = prv_menu_select_callback,
   };
 
@@ -78,11 +71,6 @@ static void prv_window_unload(Window *window) {
 
   status_bar_layer_destroy(s_status_layer);
   s_status_layer = NULL;
-
-  if (s_menu_icon) {
-    gbitmap_destroy(s_menu_icon);
-    s_menu_icon = NULL;
-  }
 }
 
 void moons_menu_init(void) {
@@ -108,11 +96,6 @@ void moons_menu_deinit(void) {
   s_window = NULL;
   s_menu_layer = NULL;
   s_status_layer = NULL;
-
-  if (s_menu_icon) {
-    gbitmap_destroy(s_menu_icon);
-    s_menu_icon = NULL;
-  }
 }
 
 void moons_menu_show(void) {

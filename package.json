@@ -40,6 +40,11 @@
           "type": "raw",
           "name": "PLANET_SATURN",
           "file": "planets/Saturn.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "MOON",
+          "file": "moons/Moon.pdc"
         }
       ]
     }
