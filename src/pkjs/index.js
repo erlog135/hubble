@@ -1,16 +1,17 @@
-var Astronomy = require('astronomy-engine');
 var Observer = require('./astronomy/observer');
+var Bodies = require('./astronomy/bodies');
 
 var activeObserver = null;
-
-function logNextMoonPhase() {
-  var now = new Date();
-  var quarter = Astronomy.SearchMoonQuarter(now);
-  var phaseNames = ["New Moon", "First Quarter", "Full Moon", "Third Quarter"];
-  var phaseText = "Current/Next Moon Phase: " + phaseNames[quarter.quarter] +
-    " at " + quarter.time.date.toUTCString();
-  console.log(phaseText);
-}
+var phaseNames = [
+  "New Moon",
+  "Waxing Crescent",
+  "First Quarter",
+  "Waxing Gibbous",
+  "Full Moon",
+  "Waning Gibbous",
+  "Third Quarter",
+  "Waning Crescent"
+];
 
 Pebble.addEventListener('ready', function() {
   console.log('PebbleKit JS ready!');
@@ -19,9 +20,13 @@ Pebble.addEventListener('ready', function() {
     activeObserver = observer;
     console.log('Observer ready (lat=' + observer.latitude +
       ', lon=' + observer.longitude + ', h=' + observer.height + ')');
-    logNextMoonPhase();
+    var phaseIndex = Bodies.getMoonPhase(new Date());
+    console.log('Current Moon Phase: ' + phaseNames[phaseIndex] +
+      ' (index ' + phaseIndex + ')');
   }).catch(function(err) {
     console.log('Proceeding without observer: ' + err.message);
-    logNextMoonPhase();
+    var phaseIndex = Bodies.getMoonPhase(new Date());
+    console.log('Current Moon Phase: ' + phaseNames[phaseIndex] +
+      ' (index ' + phaseIndex + ')');
   });
 });
