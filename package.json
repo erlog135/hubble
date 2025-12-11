@@ -22,6 +22,9 @@
       "emery",
       "flint"
     ],
+    "capabilities": [
+      "location"
+    ],
     "watchapp": {
       "watchface": false
     },
@@ -35,6 +38,51 @@
           "name": "MENU_ICON",
           "file": "Icon_25px.png",
           "menuIcon": true
+        },
+        {
+          "type": "bitmap",
+          "name": "PLANET_MERCURY",
+          "file": "planets/Mercury_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "NEW_MOON",
+          "file": "moons/NewMoon_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "WAXING_CRESCENT",
+          "file": "moons/WaxingCrescent_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "FIRST_QUARTER",
+          "file": "moons/FirstQuarter_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "WAXING_GIBBOUS",
+          "file": "moons/WaxingGibbous_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "FULL_MOON",
+          "file": "moons/FullMoon_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "WANING_GIBBOUS",
+          "file": "moons/WaningGibbous_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "THIRD_QUARTER",
+          "file": "moons/ThirdQuarter_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "WANING_CRESCENT",
+          "file": "moons/WaningCrescent_50px.png"
         },
         {
           "type": "raw",

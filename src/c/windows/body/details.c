@@ -22,6 +22,7 @@ static TextLayer *s_detail_layer;
 static TextLayer *s_grid_layers[GRID_ROWS][GRID_COLS];
 static TextLayer *s_long_text_layer;
 static GDrawCommandImage *s_pdc_image;
+static GBitmap *s_bitmap_image;
 static StatusBarLayer *s_status_layer;
 
 static int16_t s_page_height;
@@ -42,8 +43,13 @@ static const DetailsContent s_default_content = {
         "moon, rising late at night and visible in the pre-dawn sky. The Moon "
         "stabilizes Earth's axial tilt, drives the tides, and continues to be "
         "a target for exploration.",
-    .image_resource_id = RESOURCE_ID_MOON,
+    .image_resource_id = RESOURCE_ID_FULL_MOON,
+    .image_type = DETAILS_IMAGE_TYPE_BITMAP,
 };
+
+static GSize prv_get_image_size(void) {
+  return GSize(HERO_IMAGE_SIZE, HERO_IMAGE_SIZE);
+}
 
 static GSize prv_calc_text_size(const char *text, GFont font, GRect frame) {
   return graphics_text_layout_get_content_size(text, font, frame,
@@ -52,16 +58,26 @@ static GSize prv_calc_text_size(const char *text, GFont font, GRect frame) {
 }
 
 static void prv_draw_image(Layer *layer, GContext *ctx) {
-  if (!s_pdc_image) {
+  const GSize image_bounds = prv_get_image_size();
+  if (image_bounds.w == 0 || image_bounds.h == 0) {
     return;
   }
 
   const GRect bounds = layer_get_bounds(layer);
-  const GSize image_bounds = GSize(HERO_IMAGE_SIZE, HERO_IMAGE_SIZE);
   const GPoint origin = GPoint((bounds.size.w - image_bounds.w) / 2,
                                (bounds.size.h - image_bounds.h) / 2);
 
-  gdraw_command_image_draw(ctx, s_pdc_image, origin);
+  if (s_content.image_type == DETAILS_IMAGE_TYPE_BITMAP && s_bitmap_image) {
+    const GRect target =
+        GRect(origin.x, origin.y, image_bounds.w, image_bounds.h);
+    graphics_context_set_compositing_mode(ctx, GCompOpSet);
+    graphics_draw_bitmap_in_rect(ctx, s_bitmap_image, target);
+    return;
+  }
+
+  if (s_content.image_type == DETAILS_IMAGE_TYPE_PDC && s_pdc_image) {
+    gdraw_command_image_draw(ctx, s_pdc_image, origin);
+  }
 }
 
 static void prv_select_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -175,8 +191,15 @@ static void prv_window_load(Window *window) {
   y_cursor += title_frame.size.h + TITLE_BOTTOM_MARGIN;
 
   // Hero image
-  s_pdc_image = gdraw_command_image_create_with_resource(s_content.image_resource_id);
-  const int16_t image_layer_height = HERO_IMAGE_SIZE + HERO_IMAGE_FRAME_PADDING;
+  s_pdc_image = NULL;
+  s_bitmap_image = NULL;
+  if (s_content.image_type == DETAILS_IMAGE_TYPE_BITMAP) {
+    s_bitmap_image = gbitmap_create_with_resource(s_content.image_resource_id);
+  } else {
+    s_pdc_image = gdraw_command_image_create_with_resource(s_content.image_resource_id);
+  }
+  const GSize hero_size = prv_get_image_size();
+  const int16_t image_layer_height = hero_size.h + HERO_IMAGE_FRAME_PADDING;
   s_image_layer = layer_create(GRect(0, y_cursor, bounds.size.w, image_layer_height));
   layer_set_update_proc(s_image_layer, prv_draw_image);
   scroll_layer_add_child(s_scroll_layer, s_image_layer);
@@ -260,6 +283,10 @@ static void prv_window_unload(Window *window) {
     gdraw_command_image_destroy(s_pdc_image);
     s_pdc_image = NULL;
   }
+  if (s_bitmap_image) {
+    gbitmap_destroy(s_bitmap_image);
+    s_bitmap_image = NULL;
+  }
   if (s_status_layer) {
     status_bar_layer_destroy(s_status_layer);
     s_status_layer = NULL;
@@ -298,6 +325,7 @@ void details_deinit(void) {
   s_detail_layer = NULL;
   s_long_text_layer = NULL;
   s_pdc_image = NULL;
+  s_bitmap_image = NULL;
   s_status_layer = NULL;
 }
 
@@ -305,11 +333,10 @@ void details_show(const DetailsContent *content) {
   if (!s_window) {
     details_init();
   }
-  //we don't have any real content yet, so we'll just use the default content
   s_content = s_default_content;
-//   if (content) {
-//     s_content = *content;
-//   }
+  if (content) {
+    s_content = *content;
+  }
   window_stack_push(s_window, true);
 }
 

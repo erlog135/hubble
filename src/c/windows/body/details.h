@@ -6,6 +6,11 @@
 
 #include <pebble.h>
 
+typedef enum {
+  DETAILS_IMAGE_TYPE_PDC,
+  DETAILS_IMAGE_TYPE_BITMAP,
+} DetailsImageType;
+
 typedef struct {
   const char *title_text;
   const char *detail_text;
@@ -15,6 +20,7 @@ typedef struct {
   const char *grid_bottom_right;
   const char *long_text;
   uint32_t image_resource_id;  // RESOURCE_ID_*
+  DetailsImageType image_type;
 } DetailsContent;
 
 void details_init(void);
