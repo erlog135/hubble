@@ -29,7 +29,8 @@
       "watchface": false
     },
     "messageKeys": [
-      "dummy"
+      "REQUEST_BODY",
+      "BODY_PACKAGE"
     ],
     "resources": {
       "media": [

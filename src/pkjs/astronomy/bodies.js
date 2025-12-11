@@ -1,5 +1,6 @@
 var Astronomy = require('astronomy-engine');
 
+
 function resolveBody(body) {
   if (!body) {
     throw new Error('Body is required');
