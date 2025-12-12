@@ -1,5 +1,6 @@
 var Observer = require('./astronomy/observer');
 var Bodies = require('./astronomy/bodies');
+var MsgProc = require('./msgproc');
 
 var activeObserver = null;
 var phaseNames = [
@@ -20,6 +21,11 @@ Pebble.addEventListener('ready', function() {
     activeObserver = observer;
     console.log('Observer ready (lat=' + observer.latitude +
       ', lon=' + observer.longitude + ', h=' + observer.height + ')');
+
+    // Register handler for body data requests from watch
+    MsgProc.registerBodyRequestHandler(function() { return activeObserver; });
+    console.log('Body request handler registered');
+
     var phaseIndex = Bodies.getMoonPhase(new Date());
     console.log('Current Moon Phase: ' + phaseNames[phaseIndex] +
       ' (index ' + phaseIndex + ')');

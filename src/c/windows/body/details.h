@@ -28,4 +28,8 @@ void details_deinit(void);
 
 // Passing NULL uses the default static content.
 void details_show(const DetailsContent *content);
+
+// Show details for a specific body by requesting data from the phone
+void details_show_body(int body_id);
+
 void details_hide(void);

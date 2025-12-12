@@ -42,6 +42,26 @@
         },
         {
           "type": "bitmap",
+          "name": "ACTION_LIGHT_OFF",
+          "file": "actions/action_light_off.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ACTION_LIGHT_ON",
+          "file": "actions/action_light_on.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ACTION_VIBRATE_DISABLE",
+          "file": "actions/action_vibrate_disable.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ACTION_VIBRATE_ENABLE",
+          "file": "actions/action_vibrate_enable.png"
+        },
+        {
+          "type": "bitmap",
           "name": "PLANET_MERCURY",
           "file": "planets/Mercury_50px.png"
         },

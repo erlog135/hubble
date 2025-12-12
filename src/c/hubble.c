@@ -1,7 +1,9 @@
 #include <pebble.h>
 #include "windows/home.h"
+#include "utils/bodymsg.h"
 
 static void prv_init(void) {
+  bodymsg_init();
   home_init();
   home_show();
 }

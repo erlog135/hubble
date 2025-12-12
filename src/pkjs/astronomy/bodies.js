@@ -25,14 +25,15 @@ function getIllumination(body, date) {
 
 function getRiseSet(body, observer, date) {
   var when = date || new Date();
-  var rise = Astronomy.SearchRiseSet(resolveBody(body), observer, Astronomy.Direction.Rise, when);
-  var set = Astronomy.SearchRiseSet(resolveBody(body), observer, Astronomy.Direction.Set, when);
+  var rise = Astronomy.SearchRiseSet(resolveBody(body), observer, +1, when, 2);
+  var set = Astronomy.SearchRiseSet(resolveBody(body), observer, -1, when, 2);
   return {
     rise: rise ? rise.date : null,
     set: set ? set.date : null
   };
 }
 
+//TODO: do all phases span the same angle range? fix if they don't
 function getMoonPhase(date) {
   var when = date || new Date();
   var angle = Astronomy.MoonPhase(when); // 0=new, 180=full

@@ -1,5 +1,6 @@
 #include "details.h"
 #include "../../style.h"
+#include "../../utils/bodymsg.h"
 #include "options.h"
 
 #define HERO_IMAGE_SIZE 50
@@ -47,6 +48,18 @@ static const DetailsContent s_default_content = {
     .image_type = DETAILS_IMAGE_TYPE_BITMAP,
 };
 
+static const DetailsContent s_loading_content = {
+    .title_text = "Loading...",
+    .detail_text = "Fetching data",
+    .grid_top_left = "RISE",
+    .grid_top_right = "SET",
+    .grid_bottom_left = "--:--",
+    .grid_bottom_right = "--:--",
+    .long_text = "Retrieving astronomical data from your phone...",
+    .image_resource_id = RESOURCE_ID_FULL_MOON,  // Keep default image for now
+    .image_type = DETAILS_IMAGE_TYPE_BITMAP,
+};
+
 static GSize prv_get_image_size(void) {
   return GSize(HERO_IMAGE_SIZE, HERO_IMAGE_SIZE);
 }
@@ -80,6 +93,65 @@ static void prv_draw_image(Layer *layer, GContext *ctx) {
   }
 }
 
+static void prv_update_image(void) {
+  // Clean up old images
+  if (s_pdc_image) {
+    gdraw_command_image_destroy(s_pdc_image);
+    s_pdc_image = NULL;
+  }
+  if (s_bitmap_image) {
+    gbitmap_destroy(s_bitmap_image);
+    s_bitmap_image = NULL;
+  }
+
+  // Load new image
+  if (s_content.image_type == DETAILS_IMAGE_TYPE_BITMAP) {
+    s_bitmap_image = gbitmap_create_with_resource(s_content.image_resource_id);
+  } else {
+    s_pdc_image = gdraw_command_image_create_with_resource(s_content.image_resource_id);
+  }
+
+  // Mark image layer for redraw
+  if (s_image_layer) {
+    layer_mark_dirty(s_image_layer);
+  }
+}
+
+static void prv_update_content_display(void) {
+  if (!s_window) {
+    return;
+  }
+
+  // Update title
+  if (s_title_layer) {
+    text_layer_set_text(s_title_layer, s_content.title_text);
+  }
+
+  // Update detail text
+  if (s_detail_layer) {
+    text_layer_set_text(s_detail_layer, s_content.detail_text);
+  }
+
+  // Update grid text
+  if (s_grid_layers[0][0]) text_layer_set_text(s_grid_layers[0][0], s_content.grid_top_left);
+  if (s_grid_layers[0][1]) text_layer_set_text(s_grid_layers[0][1], s_content.grid_top_right);
+  if (s_grid_layers[1][0]) text_layer_set_text(s_grid_layers[1][0], s_content.grid_bottom_left);
+  if (s_grid_layers[1][1]) text_layer_set_text(s_grid_layers[1][1], s_content.grid_bottom_right);
+
+  // Update long text
+  if (s_long_text_layer) {
+    text_layer_set_text(s_long_text_layer, s_content.long_text);
+  }
+
+  // Update image if needed
+  prv_update_image();
+
+  // Mark layers for redraw
+  if (s_scroll_layer) {
+    layer_mark_dirty(scroll_layer_get_layer(s_scroll_layer));
+  }
+}
+
 static void prv_select_click_handler(ClickRecognizerRef recognizer, void *context) {
   options_menu_show();
 }
@@ -108,7 +180,6 @@ static void prv_scroll_down_handler(ClickRecognizerRef recognizer, void *context
 }
 
 static void prv_click_config_provider(void *context) {
-  ScrollLayer *scroll_layer = (ScrollLayer *)context;
   window_single_click_subscribe(BUTTON_ID_SELECT, prv_select_click_handler);
   window_single_click_subscribe(BUTTON_ID_UP, prv_scroll_up_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, prv_scroll_down_handler);
@@ -333,11 +404,41 @@ void details_show(const DetailsContent *content) {
   if (!s_window) {
     details_init();
   }
+
+  // Update content
   s_content = s_default_content;
   if (content) {
     s_content = *content;
   }
-  window_stack_push(s_window, true);
+
+  // Check if window is already visible
+  bool window_visible = window_stack_contains_window(s_window);
+
+  if (window_visible) {
+    // Window is already visible, update the content in place
+    prv_update_content_display();
+  } else {
+    // Window not visible, push it to show
+    window_stack_push(s_window, true);
+  }
+}
+
+void details_show_body(int body_id) {
+  if (!s_window) {
+    details_init();
+  }
+
+  // Request body data from the phone
+  if (bodymsg_request_body(body_id)) {
+    // Show window with loading content
+    s_content = s_loading_content;
+    window_stack_push(s_window, true);
+  } else {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to request body data for ID %d", body_id);
+    // Fallback to default content if request fails
+    s_content = s_default_content;
+    window_stack_push(s_window, true);
+  }
 }
 
 void details_hide(void) {

@@ -18,6 +18,7 @@ var Keys = require('message_keys');
 
 // Body names keyed by body id (must stay in sync with watch side)
 var BODY_NAMES = [
+  "Moon",
   "Mercury",
   "Venus",
   "Mars",
@@ -26,7 +27,6 @@ var BODY_NAMES = [
   "Uranus",
   "Neptune",
   "Pluto",
-  "Moon",
   "Io",
   "Europa",
   "Ganymede",
@@ -62,13 +62,43 @@ function packBodyPackage(bodyId, observer, date) {
   }
 
   var when = date || new Date();
-  var horizontal = Bodies.getHorizontal(bodyName, observer, when);
-  var riseSet = Bodies.getRiseSet(bodyName, observer, when);
-  var illum = Bodies.getIllumination(bodyName, when);
-  var phase = (bodyName === 'Moon') ? Bodies.getMoonPhase(when) : 0;
 
-  var az = encodeUnsigned(horizontal.azimuth, 9, 0, 360);
-  var alt = encodeSigned(horizontal.altitude, 8, -90, 90);
+  var horizontal = null;
+  try {
+    horizontal = Bodies.getHorizontal(bodyName, observer, when);
+  } catch (err) {
+    console.log('Warning: Could not calculate horizontal position for ' + bodyName + ': ' + err.message);
+    horizontal = { azimuth: 0, altitude: 0 };
+  }
+
+  var riseSet = null;
+  try {
+    riseSet = Bodies.getRiseSet(bodyName, observer, when);
+  } catch (err) {
+    console.log('Warning: Could not calculate rise/set for ' + bodyName + ': ' + err.message);
+    riseSet = { rise: null, set: null };
+  }
+
+  var illum = null;
+  try {
+    illum = Bodies.getIllumination(bodyName, when);
+  } catch (err) {
+    console.log('Warning: Could not calculate illumination for ' + bodyName + ': ' + err.message);
+    illum = { mag: 0 };
+  }
+
+  var phase = 0;
+  if (bodyName === 'Moon') {
+    try {
+      phase = Bodies.getMoonPhase(when);
+    } catch (err) {
+      console.log('Warning: Could not calculate moon phase: ' + err.message);
+      phase = 0;
+    }
+  }
+
+  var az = horizontal ? encodeUnsigned(horizontal.azimuth || 0, 9, 0, 360) : 0;
+  var alt = horizontal ? encodeSigned(horizontal.altitude || 0, 8, -90, 90) : 0;
 
   var riseHour = riseSet.rise ? riseSet.rise.getUTCHours() : SENTINEL_HOUR;
   var riseMin = riseSet.rise ? riseSet.rise.getUTCMinutes() : SENTINEL_MIN;
@@ -127,6 +157,7 @@ function registerBodyRequestHandler(observerProvider) {
   Pebble.addEventListener('appmessage', function(e) {
     var payload = e && e.payload ? e.payload : {};
     var bodyId = payload[Keys.REQUEST_BODY];
+    console.log('Received body request for body ' + bodyId);
     if (bodyId === undefined || bodyId === null) {
       return;
     }

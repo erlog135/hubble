@@ -1,28 +1,38 @@
-#include "catalog.h"
-#include "moons.h"
 #include "planets.h"
+#include "../body/details.h"
 #include "../../style.h"
+#include "../../utils/bodymsg.h"
+
+#define PLANET_COUNT 8
+
+// Body IDs for each menu item (must match order in menu)
+static const int PLANET_BODY_IDS[PLANET_COUNT] = {
+  1,  // Mercury
+  2,  // Venus
+  3,  // Mars
+  4,  // Jupiter
+  5,  // Saturn
+  6,  // Uranus
+  7,  // Neptune
+  8   // Pluto
+};
 
 static Window *s_window;
 static SimpleMenuLayer *s_menu_layer;
 static SimpleMenuSection s_menu_sections[1];
-static SimpleMenuItem s_menu_items[5];
+static SimpleMenuItem s_menu_items[PLANET_COUNT];
 static StatusBarLayer *s_status_layer;
 
 static void prv_menu_select_callback(int index, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Planets menu selected: %s (body ID: %d)",
+          s_menu_items[index].title, PLANET_BODY_IDS[index]);
 
-  APP_LOG(APP_LOG_LEVEL_INFO, "Catalog menu selected: %s", s_menu_items[index].title);
-
-  switch (index) {
-    case 0:  // Moons
-      moons_menu_show();
-      break;
-    case 1:  // Planets
-      planets_menu_show();
-      break;
-    default:
-      vibes_short_pulse();
-      break;
+  if (index >= 0 && index < PLANET_COUNT) {
+    int body_id = PLANET_BODY_IDS[index];
+    details_show_body(body_id);
+  } else {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Invalid menu index: %d", index);
+    details_show(NULL);
   }
 }
 
@@ -34,28 +44,39 @@ static void prv_window_load(Window *window) {
 
   s_status_layer = status_bar_layer_create();
   status_bar_layer_set_colors(s_status_layer, layout->background, layout->foreground);
+
   layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
 
   s_menu_items[0] = (SimpleMenuItem){
-      .title = "Moons",
+      .title = "Mercury",
       .callback = prv_menu_select_callback,
   };
   s_menu_items[1] = (SimpleMenuItem){
-      .title = "Planets",
+      .title = "Venus",
       .callback = prv_menu_select_callback,
   };
   s_menu_items[2] = (SimpleMenuItem){
-      .title = "Stars",
+      .title = "Mars",
       .callback = prv_menu_select_callback,
   };
   s_menu_items[3] = (SimpleMenuItem){
-      .title = "Constellations",
-      .subtitle = "Zodiac",
+      .title = "Jupiter",
       .callback = prv_menu_select_callback,
   };
   s_menu_items[4] = (SimpleMenuItem){
-      .title = "Constellations",
-      .subtitle = "Other",
+      .title = "Saturn",
+      .callback = prv_menu_select_callback,
+  };
+  s_menu_items[5] = (SimpleMenuItem){
+      .title = "Uranus",
+      .callback = prv_menu_select_callback,
+  };
+  s_menu_items[6] = (SimpleMenuItem){
+      .title = "Neptune",
+      .callback = prv_menu_select_callback,
+  };
+  s_menu_items[7] = (SimpleMenuItem){
+      .title = "Pluto",
       .callback = prv_menu_select_callback,
   };
 
@@ -82,7 +103,7 @@ static void prv_window_unload(Window *window) {
   s_status_layer = NULL;
 }
 
-void catalog_menu_init(void) {
+void planets_menu_init(void) {
   if (s_window) {
     return;
   }
@@ -95,7 +116,7 @@ void catalog_menu_init(void) {
                                 });
 }
 
-void catalog_menu_deinit(void) {
+void planets_menu_deinit(void) {
   if (!s_window) {
     return;
   }
@@ -107,14 +128,14 @@ void catalog_menu_deinit(void) {
   s_status_layer = NULL;
 }
 
-void catalog_menu_show(void) {
+void planets_menu_show(void) {
   if (!s_window) {
-    catalog_menu_init();
+    planets_menu_init();
   }
   window_stack_push(s_window, true);
 }
 
-void catalog_menu_hide(void) {
+void planets_menu_hide(void) {
   if (s_window) {
     window_stack_remove(s_window, true);
   }

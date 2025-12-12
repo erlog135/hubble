@@ -2,8 +2,18 @@
 #include "moons.h"
 #include "../body/details.h"
 #include "../../style.h"
+#include "../../utils/bodymsg.h"
 
 #define MOON_COUNT 5
+
+// Body IDs for each menu item (must match order in menu)
+static const int MOON_BODY_IDS[MOON_COUNT] = {
+  0,  // Moon
+  9,  // Io
+  10, // Europa
+  11, // Ganymede
+  12  // Callisto
+};
 
 static Window *s_window;
 static SimpleMenuLayer *s_menu_layer;
@@ -12,8 +22,16 @@ static SimpleMenuItem s_menu_items[MOON_COUNT];
 static StatusBarLayer *s_status_layer;
 
 static void prv_menu_select_callback(int index, void *context) {
-  APP_LOG(APP_LOG_LEVEL_INFO, "Moons menu selected: %s", s_menu_items[index].title);
-  details_show(NULL);
+  APP_LOG(APP_LOG_LEVEL_INFO, "Moons menu selected: %s (body ID: %d)",
+          s_menu_items[index].title, MOON_BODY_IDS[index]);
+
+  if (index >= 0 && index < MOON_COUNT) {
+    int body_id = MOON_BODY_IDS[index];
+    details_show_body(body_id);
+  } else {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Invalid menu index: %d", index);
+    details_show(NULL);
+  }
 }
 
 static void prv_window_load(Window *window) {
