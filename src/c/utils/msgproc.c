@@ -31,7 +31,8 @@ static const char* MOON_PHASES[] = {
 };
 
 // Static buffers for formatted strings
-static char s_time_buffer[16];
+static char s_rise_time_buffer[16];
+static char s_set_time_buffer[16];
 static char s_angle_buffer[16];
 
 // Helper function to read bits from the byte array
@@ -113,8 +114,9 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
 
     uint32_t resource_id = body_info_get_resource_id(body_id);
 
-    // Determine if this is a moon (Moon has body_id 0)
+    // Determine body characteristics
     bool is_moon = (body_id == 0);
+    bool can_have_rise_set = (body_id <= 8);  // Moon (0) and planets (1-8)
 
     // Format the content structure
     content->title_text = body_name;
@@ -133,20 +135,30 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
         content->detail_text = detail_buf;
     }
 
-    // Grid: Rise/Set times
-    content->grid_top_left = "RISE";
-    content->grid_top_right = "SET";
+    // Grid: Rise/Set times for bodies that can have them calculated, Azimuth/Altitude for others
 
-    if (rise_hour != SENTINEL_HOUR && rise_minute != SENTINEL_MIN) {
-        content->grid_bottom_left = msgproc_format_time(rise_hour, rise_minute);
-    } else {
-        content->grid_bottom_left = "--:--";
-    }
+    if (can_have_rise_set) {
+        // For Moon and planets: show rise/set times
+        content->grid_top_left = "RISE";
+        content->grid_top_right = "SET";
 
-    if (set_hour != SENTINEL_HOUR && set_minute != SENTINEL_MIN) {
-        content->grid_bottom_right = msgproc_format_time(set_hour, set_minute);
+        if (rise_hour != SENTINEL_HOUR && rise_minute != SENTINEL_MIN) {
+            content->grid_bottom_left = msgproc_format_time(rise_hour, rise_minute, s_rise_time_buffer, sizeof(s_rise_time_buffer));
+        } else {
+            content->grid_bottom_left = "--:--";
+        }
+
+        if (set_hour != SENTINEL_HOUR && set_minute != SENTINEL_MIN) {
+            content->grid_bottom_right = msgproc_format_time(set_hour, set_minute, s_set_time_buffer, sizeof(s_set_time_buffer));
+        } else {
+            content->grid_bottom_right = "--:--";
+        }
     } else {
-        content->grid_bottom_right = "--:--";
+        // For other bodies (moons, future constellations): show azimuth and altitude
+        content->grid_top_left = "AZIMUTH";
+        content->grid_top_right = "ALTITUDE";
+        content->grid_bottom_left = msgproc_format_angle((int)azimuth, true);   // azimuth
+        content->grid_bottom_right = msgproc_format_angle((int)altitude, false); // altitude
     }
 
     // Long text: detailed information
@@ -172,14 +184,31 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
             "Currently in %s phase. Azimuth: %d°, Altitude: %d°, "
             "Luminance: %s.",
             phase_name, (int)azimuth, (int)altitude, luminance_str);
+    } else if (!can_have_rise_set) {
+        // Jupiter's moon description
+        // Format magnitude as integer with decimal (since Pebble doesn't support float printing)
+        int magnitude_int = luminance_x10 / 10;
+        int magnitude_frac = abs(luminance_x10) % 10;
+        char magnitude_str[16];
+        if (luminance_x10 < 0) {
+            snprintf(magnitude_str, sizeof(magnitude_str), "-%d.%d", -magnitude_int, magnitude_frac);
+        } else {
+            snprintf(magnitude_str, sizeof(magnitude_str), "%d.%d", magnitude_int, magnitude_frac);
+        }
+
+        snprintf(long_text_buf, sizeof(long_text_buf),
+            "%s is one of Jupiter's largest moons, orbiting the gas giant planet. "
+            "Current position: Azimuth %d°, Altitude %d°. "
+            "Apparent magnitude: %s.",
+            body_name, (int)azimuth, (int)altitude, magnitude_str);
     } else {
         // Planet description
         const char *rise_time = (rise_hour != SENTINEL_HOUR) ?
-                                msgproc_format_time(rise_hour, rise_minute) : "N/A";
+                                msgproc_format_time(rise_hour, rise_minute, s_rise_time_buffer, sizeof(s_rise_time_buffer)) : "N/A";
         const char *set_time = (set_hour != SENTINEL_HOUR) ?
-                               msgproc_format_time(set_hour, set_minute) : "N/A";
+                               msgproc_format_time(set_hour, set_minute, s_set_time_buffer, sizeof(s_set_time_buffer)) : "N/A";
 
-        // Format magnitude as integer with decimal (since Pebble doesn't support floats)
+        // Format magnitude as integer with decimal (since Pebble doesn't support float printing)
         int magnitude_int = luminance_x10 / 10;
         int magnitude_frac = abs(luminance_x10) % 10;
         char magnitude_str[16];
@@ -206,20 +235,26 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
     return true;
 }
 
-const char* msgproc_format_time(int hour, int minute) {
-    if (hour == SENTINEL_HOUR || minute == SENTINEL_MIN) {
+const char* msgproc_format_time(int hour, int minute, char *buffer, size_t buffer_size) {
+    if (hour >= 24 || minute >= 60) {
         return "--:--";
     }
 
-    // Convert to 12-hour format
-    bool is_pm = (hour >= 12);
-    int display_hour = hour % 12;
-    if (display_hour == 0) display_hour = 12;
+    if (clock_is_24h_style()) {
+        // 24-hour format
+        snprintf(buffer, buffer_size, "%02d:%02d",
+                 hour, minute);
+    } else {
+        // 12-hour format
+        bool is_pm = (hour >= 12);
+        int display_hour = hour % 12;
+        if (display_hour == 0) display_hour = 12;
 
-    snprintf(s_time_buffer, sizeof(s_time_buffer), "%d:%02d%s",
-             display_hour, minute, is_pm ? "PM" : "AM");
+        snprintf(buffer, buffer_size, "%d:%02d%s",
+                 display_hour, minute, is_pm ? "PM" : "AM");
+    }
 
-    return s_time_buffer;
+    return buffer;
 }
 
 const char* msgproc_format_angle(int degrees, bool is_azimuth) {

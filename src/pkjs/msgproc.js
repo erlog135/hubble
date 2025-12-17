@@ -63,28 +63,49 @@ function packBodyPackage(bodyId, observer, date) {
 
   var when = date || new Date();
 
+  // Determine body type
+  var canHaveRiseSet = (bodyId <= 8);  // Moon (0) and planets (1-8)
+  var isJupiterMoon = (bodyId >= 9 && bodyId <= 12);  // Io, Europa, Ganymede, Callisto
+
   var horizontal = null;
   try {
-    horizontal = Bodies.getHorizontal(bodyName, observer, when);
+    if (isJupiterMoon) {
+      // For Jupiter's moons, use specialized calculation
+      horizontal = Bodies.getJupiterMoonHorizontal(bodyName.toLowerCase(), observer, when);
+    } else {
+      // For planets and Moon, use standard horizontal calculation
+      horizontal = Bodies.getHorizontal(bodyName, observer, when);
+    }
   } catch (err) {
     console.log('Warning: Could not calculate horizontal position for ' + bodyName + ': ' + err.message);
     horizontal = { azimuth: 0, altitude: 0 };
   }
 
   var riseSet = null;
-  try {
-    riseSet = Bodies.getRiseSet(bodyName, observer, when);
-  } catch (err) {
-    console.log('Warning: Could not calculate rise/set for ' + bodyName + ': ' + err.message);
+  if (canHaveRiseSet) {
+    try {
+      riseSet = Bodies.getRiseSet(bodyName, observer, when);
+      console.log('Rise/set: ' + riseSet.rise + ' - ' + riseSet.set);
+    } catch (err) {
+      console.log('Warning: Could not calculate rise/set for ' + bodyName + ': ' + err.message);
+      riseSet = { rise: null, set: null };
+    }
+  } else {
+    // Bodies that can't have rise/set get null values
     riseSet = { rise: null, set: null };
   }
 
   var illum = null;
-  try {
-    illum = Bodies.getIllumination(bodyName, when);
-  } catch (err) {
-    console.log('Warning: Could not calculate illumination for ' + bodyName + ': ' + err.message);
+  if (isJupiterMoon) {
+    // Jupiter's moons don't have standard illumination calculations, use default
     illum = { mag: 0 };
+  } else {
+    try {
+      illum = Bodies.getIllumination(bodyName, when);
+    } catch (err) {
+      console.log('Warning: Could not calculate illumination for ' + bodyName + ': ' + err.message);
+      illum = { mag: 0 };
+    }
   }
 
   var phase = 0;
@@ -105,6 +126,11 @@ function packBodyPackage(bodyId, observer, date) {
   var setHour = riseSet.set ? riseSet.set.getUTCHours() : SENTINEL_HOUR;
   var setMin = riseSet.set ? riseSet.set.getUTCMinutes() : SENTINEL_MIN;
 
+
+  console.log('Rise/set: ' + riseHour + ':' + riseMin + ' - ' + setHour + ':' + setMin);
+  console.log('Illum: ' + illum.mag);
+  console.log('Phase: ' + phase);
+  
   var lumTimes10 = encodeSigned((illum && illum.mag != null) ? illum.mag * 10 : 0, 9, -256, 255);
   var phaseIndex = encodeUnsigned(phase, 3, 0, 7);
 
