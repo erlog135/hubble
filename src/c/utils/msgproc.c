@@ -232,6 +232,10 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
     // Determine image type (Saturn uses PDC, others use bitmap)
     content->image_type = (body_id == 5) ? DETAILS_IMAGE_TYPE_PDC : DETAILS_IMAGE_TYPE_BITMAP;
 
+    // Store raw azimuth and altitude for locator functionality
+    content->azimuth_deg = (int16_t)azimuth;
+    content->altitude_deg = (int16_t)altitude;
+
     return true;
 }
 

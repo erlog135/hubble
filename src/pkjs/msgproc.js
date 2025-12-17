@@ -13,8 +13,8 @@
  * +5 bits padding
  */
 
-var Bodies = require('./astronomy/bodies');
 var Keys = require('message_keys');
+var Bodies = require('./astronomy/bodies');
 
 // Body names keyed by body id (must stay in sync with watch side)
 var BODY_NAMES = [
@@ -182,7 +182,17 @@ function sendBodyPackage(bodyId, observer, date) {
 function registerBodyRequestHandler(observerProvider) {
   Pebble.addEventListener('appmessage', function(e) {
     var payload = e && e.payload ? e.payload : {};
-    var bodyId = payload[Keys.REQUEST_BODY];
+    console.log('Received payload: ' + JSON.stringify(payload));
+
+    //this is okay in emulator but not on device
+    // var bodyId = payload[Keys.REQUEST_BODY];
+
+    var bodyId = null;
+
+    if (payload.hasOwnProperty("REQUEST_BODY")) {
+      bodyId = payload["REQUEST_BODY"];
+    }
+    
     console.log('Received body request for body ' + bodyId);
     if (bodyId === undefined || bodyId === null) {
       return;

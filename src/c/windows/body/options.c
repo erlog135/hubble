@@ -1,5 +1,6 @@
 #include "options.h"
 #include "locator.h"
+#include "details.h"
 #include "../../style.h"
 
 static ActionMenu *s_menu;
@@ -24,6 +25,13 @@ static void prv_on_locate(ActionMenu *menu, const ActionMenuItem *action, void *
   (void)menu;
   (void)action;
   (void)context;
+
+  // Get current details content and set locator target
+  const DetailsContent *content = details_get_current_content();
+  if (content) {
+    locator_set_target(content->altitude_deg, content->azimuth_deg);
+  }
+
   locator_show();
 }
 

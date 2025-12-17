@@ -21,6 +21,8 @@ typedef struct {
   const char *long_text;
   uint32_t image_resource_id;  // RESOURCE_ID_*
   DetailsImageType image_type;
+  int16_t azimuth_deg;  // Azimuth in degrees (0-360)
+  int16_t altitude_deg; // Altitude in degrees (-90 to 90)
 } DetailsContent;
 
 void details_init(void);
@@ -33,3 +35,6 @@ void details_show(const DetailsContent *content);
 void details_show_body(int body_id);
 
 void details_hide(void);
+
+// Get the current details content (for use by options menu)
+const DetailsContent* details_get_current_content(void);

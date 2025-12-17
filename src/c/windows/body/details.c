@@ -28,6 +28,11 @@ static StatusBarLayer *s_status_layer;
 
 static int16_t s_page_height;
 static DetailsContent s_content;
+static bool s_is_loading;
+
+static bool prv_is_loading(void) {
+  return s_is_loading;
+}
 
 static const DetailsContent s_default_content = {
     .title_text = "Moon",
@@ -46,6 +51,8 @@ static const DetailsContent s_default_content = {
         "a target for exploration.",
     .image_resource_id = RESOURCE_ID_FULL_MOON,
     .image_type = DETAILS_IMAGE_TYPE_BITMAP,
+    .azimuth_deg = 0,
+    .altitude_deg = 0,
 };
 
 static const DetailsContent s_loading_content = {
@@ -58,6 +65,8 @@ static const DetailsContent s_loading_content = {
     .long_text = "Retrieving astronomical data from your phone...",
     .image_resource_id = RESOURCE_ID_FULL_MOON,  // Keep default image for now
     .image_type = DETAILS_IMAGE_TYPE_BITMAP,
+    .azimuth_deg = 0,
+    .altitude_deg = 0,
 };
 
 static GSize prv_get_image_size(void) {
@@ -153,7 +162,9 @@ static void prv_update_content_display(void) {
 }
 
 static void prv_select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  options_menu_show();
+  if (!prv_is_loading()) {
+    options_menu_show();
+  }
 }
 
 static void prv_scroll_up_handler(ClickRecognizerRef recognizer, void *context) {
@@ -374,6 +385,7 @@ void details_init(void) {
   }
 
   s_content = s_default_content;
+  s_is_loading = false;
   s_window = window_create();
   window_set_background_color(s_window, layout_get()->background);
   window_set_window_handlers(s_window, (WindowHandlers){
@@ -409,6 +421,7 @@ void details_show(const DetailsContent *content) {
   s_content = s_default_content;
   if (content) {
     s_content = *content;
+    s_is_loading = false;
   }
 
   // Check if window is already visible
@@ -432,6 +445,7 @@ void details_show_body(int body_id) {
   if (bodymsg_request_body(body_id)) {
     // Show window with loading content
     s_content = s_loading_content;
+    s_is_loading = true;
     window_stack_push(s_window, true);
   } else {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to request body data for ID %d", body_id);
@@ -445,4 +459,8 @@ void details_hide(void) {
   if (s_window) {
     window_stack_remove(s_window, true);
   }
+}
+
+const DetailsContent* details_get_current_content(void) {
+  return &s_content;
 }
