@@ -4,21 +4,17 @@
 #include "../../style.h"
 #include "../../utils/bodymsg.h"
 
-#define MOON_COUNT 5
+#define MOON_COUNT 1
 
 // Body IDs for each menu item (must match order in menu)
 static const int MOON_BODY_IDS[MOON_COUNT] = {
-  0,  // Moon
-  9,  // Io
-  10, // Europa
-  11, // Ganymede
-  12  // Callisto
+  0   // Moon
 };
 
 static Window *s_window;
 static SimpleMenuLayer *s_menu_layer;
 static SimpleMenuSection s_menu_sections[1];
-static SimpleMenuItem s_menu_items[MOON_COUNT];
+static SimpleMenuItem s_menu_items[1];
 static StatusBarLayer *s_status_layer;
 
 static void prv_menu_select_callback(int index, void *context) {
@@ -49,22 +45,6 @@ static void prv_window_load(Window *window) {
 
   s_menu_items[0] = (SimpleMenuItem){
       .title = "The Moon",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[1] = (SimpleMenuItem){
-      .title = "Io",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[2] = (SimpleMenuItem){
-      .title = "Europa",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[3] = (SimpleMenuItem){
-      .title = "Ganymede",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[4] = (SimpleMenuItem){
-      .title = "Callisto",
       .callback = prv_menu_select_callback,
   };
 

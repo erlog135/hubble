@@ -18,11 +18,12 @@ typedef struct {
   const char *grid_top_right;
   const char *grid_bottom_left;
   const char *grid_bottom_right;
-  const char *long_text;
+  char long_text[512];  // Buffer for dynamically formatted long text
   uint32_t image_resource_id;  // RESOURCE_ID_*
   DetailsImageType image_type;
   int16_t azimuth_deg;  // Azimuth in degrees (0-360)
   int16_t altitude_deg; // Altitude in degrees (-90 to 90)
+  int16_t illumination_x10; // Illumination as magnitude * 10 (-256 to 255)
 } DetailsContent;
 
 void details_init(void);

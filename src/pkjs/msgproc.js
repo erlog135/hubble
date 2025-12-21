@@ -26,11 +26,7 @@ var BODY_NAMES = [
   "Saturn",
   "Uranus",
   "Neptune",
-  "Pluto",
-  "Io",
-  "Europa",
-  "Ganymede",
-  "Callisto"
+  "Pluto"
 ];
 
 var SENTINEL_HOUR = 31;   // fits in 5 bits
@@ -65,17 +61,11 @@ function packBodyPackage(bodyId, observer, date) {
 
   // Determine body type
   var canHaveRiseSet = (bodyId <= 8);  // Moon (0) and planets (1-8)
-  var isJupiterMoon = (bodyId >= 9 && bodyId <= 12);  // Io, Europa, Ganymede, Callisto
 
   var horizontal = null;
   try {
-    if (isJupiterMoon) {
-      // For Jupiter's moons, use specialized calculation
-      horizontal = Bodies.getJupiterMoonHorizontal(bodyName.toLowerCase(), observer, when);
-    } else {
-      // For planets and Moon, use standard horizontal calculation
-      horizontal = Bodies.getHorizontal(bodyName, observer, when);
-    }
+    // For planets and Moon, use standard horizontal calculation
+    horizontal = Bodies.getHorizontal(bodyName, observer, when);
   } catch (err) {
     console.log('Warning: Could not calculate horizontal position for ' + bodyName + ': ' + err.message);
     horizontal = { azimuth: 0, altitude: 0 };
@@ -96,16 +86,11 @@ function packBodyPackage(bodyId, observer, date) {
   }
 
   var illum = null;
-  if (isJupiterMoon) {
-    // Jupiter's moons don't have standard illumination calculations, use default
+  try {
+    illum = Bodies.getIllumination(bodyName, when);
+  } catch (err) {
+    console.log('Warning: Could not calculate illumination for ' + bodyName + ': ' + err.message);
     illum = { mag: 0 };
-  } else {
-    try {
-      illum = Bodies.getIllumination(bodyName, when);
-    } catch (err) {
-      console.log('Warning: Could not calculate illumination for ' + bodyName + ': ' + err.message);
-      illum = { mag: 0 };
-    }
   }
 
   var phase = 0;

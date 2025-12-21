@@ -41,18 +41,12 @@ static const DetailsContent s_default_content = {
     .grid_top_right = "SET",
     .grid_bottom_left = "8:00 PM",
     .grid_bottom_right = "11:30 AM",
-    .long_text =
-        "Earth's Moon is the fifth largest natural satellite in the Solar "
-        "System and the only place beyond Earth where humans have set foot. "
-        "Its phases are driven by its position relative to the Sun and Earth; "
-        "a waning crescent is the final sliver of illumination before the new "
-        "moon, rising late at night and visible in the pre-dawn sky. The Moon "
-        "stabilizes Earth's axial tilt, drives the tides, and continues to be "
-        "a target for exploration.",
+    .long_text = "",  // Empty initially
     .image_resource_id = RESOURCE_ID_FULL_MOON,
     .image_type = DETAILS_IMAGE_TYPE_BITMAP,
     .azimuth_deg = 0,
     .altitude_deg = 0,
+    .illumination_x10 = 0,
 };
 
 static const DetailsContent s_loading_content = {
@@ -62,11 +56,12 @@ static const DetailsContent s_loading_content = {
     .grid_top_right = "SET",
     .grid_bottom_left = "--:--",
     .grid_bottom_right = "--:--",
-    .long_text = "Retrieving astronomical data from your phone...",
+    .long_text = "Loading...\nLoading...",
     .image_resource_id = RESOURCE_ID_FULL_MOON,  // Keep default image for now
     .image_type = DETAILS_IMAGE_TYPE_BITMAP,
     .azimuth_deg = 0,
     .altitude_deg = 0,
+    .illumination_x10 = 0,
 };
 
 static GSize prv_get_image_size(void) {
@@ -126,6 +121,37 @@ static void prv_update_image(void) {
   }
 }
 
+static void prv_format_additional_info(char *buffer, size_t buffer_size) {
+  // Format altitude
+  char alt_str[32];
+  if (s_content.altitude_deg >= 0) {
+    snprintf(alt_str, sizeof(alt_str), "%d° above horizon", s_content.altitude_deg);
+  } else {
+    snprintf(alt_str, sizeof(alt_str), "%d° below horizon", -s_content.altitude_deg);
+  }
+
+  // Format azimuth with cardinal direction
+  char az_str[32];
+  const char *directions[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+  int dir_index = ((s_content.azimuth_deg + 22) / 45) % 8;  // +22 for proper rounding
+  snprintf(az_str, sizeof(az_str), "%d° %s", s_content.azimuth_deg, directions[dir_index]);
+
+  // Format illumination (magnitude)
+  char illum_str[32];
+  int magnitude_int = s_content.illumination_x10 / 10;
+  int magnitude_frac = abs(s_content.illumination_x10) % 10;
+  if (s_content.illumination_x10 < 0) {
+    snprintf(illum_str, sizeof(illum_str), "-%d.%d", -magnitude_int, magnitude_frac);
+  } else {
+    snprintf(illum_str, sizeof(illum_str), "+%d.%d", magnitude_int, magnitude_frac);
+  }
+
+  // Combine into formatted string
+  snprintf(buffer, buffer_size,
+           "Altitude\n%s\n\nAzimuth\n%s\n\nIllumination\n%s",
+           alt_str, az_str, illum_str);
+}
+
 static void prv_update_content_display(void) {
   if (!s_window) {
     return;
@@ -147,8 +173,10 @@ static void prv_update_content_display(void) {
   if (s_grid_layers[1][0]) text_layer_set_text(s_grid_layers[1][0], s_content.grid_bottom_left);
   if (s_grid_layers[1][1]) text_layer_set_text(s_grid_layers[1][1], s_content.grid_bottom_right);
 
-  // Update long text
+  // Update long text with altitude, azimuth, and illumination info
   if (s_long_text_layer) {
+    prv_format_additional_info(s_content.long_text, sizeof(s_content.long_text));
+
     text_layer_set_text(s_long_text_layer, s_content.long_text);
   }
 
@@ -312,9 +340,9 @@ static void prv_window_load(Window *window) {
 
   // Long-form text after the first "page"
   const GFont long_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
-  GRect long_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 2000);
+  GRect long_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, bounds.size.h);
   const GSize long_size = prv_calc_text_size(s_content.long_text, long_font, long_frame);
-  long_frame.size.h = long_size.h;
+  // long_frame.size.h = long_size.h;
 
   s_long_text_layer = text_layer_create(long_frame);
   text_layer_set_text(s_long_text_layer, s_content.long_text);

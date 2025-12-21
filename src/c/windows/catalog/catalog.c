@@ -37,7 +37,7 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
 
   s_menu_items[0] = (SimpleMenuItem){
-      .title = "Moons",
+      .title = "Moon",
       .callback = prv_menu_select_callback,
   };
   s_menu_items[1] = (SimpleMenuItem){

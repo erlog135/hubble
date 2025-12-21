@@ -161,80 +161,16 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
         content->grid_bottom_right = msgproc_format_angle((int)altitude, false); // altitude
     }
 
-    // Long text: detailed information
-    static char long_text_buf[512];
-
-    if (is_moon) {
-        // Moon-specific description
-        const char *phase_name = (phase < sizeof(MOON_PHASES)/sizeof(MOON_PHASES[0])) ?
-                                 MOON_PHASES[phase] : "Unknown Phase";
-        // Format luminance as integer with decimal (since Pebble doesn't support floats)
-        int luminance_int = luminance_x10 / 10;
-        int luminance_frac = abs(luminance_x10) % 10;
-        char luminance_str[16];
-        if (luminance_x10 < 0) {
-            snprintf(luminance_str, sizeof(luminance_str), "-%d.%d", -luminance_int, luminance_frac);
-        } else {
-            snprintf(luminance_str, sizeof(luminance_str), "%d.%d", luminance_int, luminance_frac);
-        }
-
-        snprintf(long_text_buf, sizeof(long_text_buf),
-            "Earth's Moon is the fifth largest natural satellite in the Solar "
-            "System and the only place beyond Earth where humans have set foot. "
-            "Currently in %s phase. Azimuth: %d°, Altitude: %d°, "
-            "Luminance: %s.",
-            phase_name, (int)azimuth, (int)altitude, luminance_str);
-    } else if (!can_have_rise_set) {
-        // Jupiter's moon description
-        // Format magnitude as integer with decimal (since Pebble doesn't support float printing)
-        int magnitude_int = luminance_x10 / 10;
-        int magnitude_frac = abs(luminance_x10) % 10;
-        char magnitude_str[16];
-        if (luminance_x10 < 0) {
-            snprintf(magnitude_str, sizeof(magnitude_str), "-%d.%d", -magnitude_int, magnitude_frac);
-        } else {
-            snprintf(magnitude_str, sizeof(magnitude_str), "%d.%d", magnitude_int, magnitude_frac);
-        }
-
-        snprintf(long_text_buf, sizeof(long_text_buf),
-            "%s is one of Jupiter's largest moons, orbiting the gas giant planet. "
-            "Current position: Azimuth %d°, Altitude %d°. "
-            "Apparent magnitude: %s.",
-            body_name, (int)azimuth, (int)altitude, magnitude_str);
-    } else {
-        // Planet description
-        const char *rise_time = (rise_hour != SENTINEL_HOUR) ?
-                                msgproc_format_time(rise_hour, rise_minute, s_rise_time_buffer, sizeof(s_rise_time_buffer)) : "N/A";
-        const char *set_time = (set_hour != SENTINEL_HOUR) ?
-                               msgproc_format_time(set_hour, set_minute, s_set_time_buffer, sizeof(s_set_time_buffer)) : "N/A";
-
-        // Format magnitude as integer with decimal (since Pebble doesn't support float printing)
-        int magnitude_int = luminance_x10 / 10;
-        int magnitude_frac = abs(luminance_x10) % 10;
-        char magnitude_str[16];
-        if (luminance_x10 < 0) {
-            snprintf(magnitude_str, sizeof(magnitude_str), "-%d.%d", -magnitude_int, magnitude_frac);
-        } else {
-            snprintf(magnitude_str, sizeof(magnitude_str), "%d.%d", magnitude_int, magnitude_frac);
-        }
-
-        snprintf(long_text_buf, sizeof(long_text_buf),
-            "%s is one of the planets visible from Earth. "
-            "Current position: Azimuth %d°, Altitude %d°. "
-            "Rises at %s, sets at %s. "
-            "Apparent magnitude: %s.",
-            body_name, (int)azimuth, (int)altitude, rise_time, set_time, magnitude_str);
-    }
-
-    content->long_text = long_text_buf;
+    // long_text buffer will be filled by details.c
     content->image_resource_id = resource_id;
 
-    // Determine image type (Saturn uses PDC, others use bitmap)
-    content->image_type = (body_id == 5) ? DETAILS_IMAGE_TYPE_PDC : DETAILS_IMAGE_TYPE_BITMAP;
+    // Determine image type (planets use bitmap, others use PDC)
+    content->image_type = (body_id > 8) ? DETAILS_IMAGE_TYPE_PDC : DETAILS_IMAGE_TYPE_BITMAP;
 
     // Store raw azimuth and altitude for locator functionality
     content->azimuth_deg = (int16_t)azimuth;
     content->altitude_deg = (int16_t)altitude;
+    content->illumination_x10 = (int16_t)luminance_x10;
 
     return true;
 }

@@ -40,45 +40,10 @@ function getMoonPhase(date) {
   return Math.floor(((angle + 22.5) % 360) / 45); // 0-7
 }
 
-// Jupiter's major moons (lowercase names as used in JupiterMoons object keys)
-// Not exported since the function now accepts names directly
-
-function getJupiterMoonHorizontal(moonName, observer, date) {
-  var when = date || new Date();
-
-  // Get Jupiter's equatorial coordinates
-  var jupiterEqu = Astronomy.Equator('Jupiter', when, observer, true, true);
-
-  // Get Jupiter's moons relative positions
-  var moons = Astronomy.JupiterMoons(when);
-
-  //console.log('Jupiter moons:', JSON.stringify(moons));
-
-  // Get the specific moon's position relative to Jupiter
-  var moon = moons[moonName];
-  if (!moon) {
-    throw new Error('Unknown Jupiter moon: ' + moonName);
-  }
-
-  // Convert to absolute equatorial coordinates
-  var moonEqu = {
-    ra: jupiterEqu.ra + moon.x / 3600,  // Convert arcseconds to degrees
-    dec: jupiterEqu.dec + moon.y / 3600
-  };
-
-  // Convert to horizontal coordinates
-  var hor = Astronomy.Horizon(when, observer, moonEqu.ra, moonEqu.dec, Astronomy.Refraction.Normal);
-
-  return {
-    azimuth: hor.azimuth,
-    altitude: hor.altitude
-  };
-}
 
 module.exports = {
   getHorizontal: getHorizontal,
   getIllumination: getIllumination,
   getRiseSet: getRiseSet,
-  getMoonPhase: getMoonPhase,
-  getJupiterMoonHorizontal: getJupiterMoonHorizontal
+  getMoonPhase: getMoonPhase
 };

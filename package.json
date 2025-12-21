@@ -62,11 +62,6 @@
         },
         {
           "type": "bitmap",
-          "name": "PLANET_MERCURY",
-          "file": "planets/Mercury_50px.png"
-        },
-        {
-          "type": "bitmap",
           "name": "NEW_MOON",
           "file": "moons/NewMoon_50px.png"
         },
@@ -106,14 +101,44 @@
           "file": "moons/WaningCrescent_50px.png"
         },
         {
-          "type": "raw",
-          "name": "PLANET_SATURN",
-          "file": "planets/Saturn.pdc"
+          "type": "bitmap",
+          "name": "PLANET_MERCURY",
+          "file": "planets/Mercury_50px.png"
         },
         {
-          "type": "raw",
-          "name": "MOON",
-          "file": "moons/Moon.pdc"
+          "type": "bitmap",
+          "name": "PLANET_VENUS",
+          "file": "planets/Venus_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "PLANET_MARS",
+          "file": "planets/Mars_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "PLANET_JUPITER",
+          "file": "planets/Jupiter_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "PLANET_SATURN",
+          "file": "planets/Saturn_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "PLANET_URANUS",
+          "file": "planets/Uranus_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "PLANET_NEPTUNE",
+          "file": "planets/Neptune_50px.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "PLANET_PLUTO",
+          "file": "planets/Pluto_50px.png"
         }
       ]
     }
