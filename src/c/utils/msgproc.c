@@ -30,6 +30,18 @@ static const char* MOON_PHASES[] = {
     "Waning Crescent"
 };
 
+// Resource IDs for Moon phases
+static const uint32_t MOON_PHASE_RESOURCE_IDS[] = {
+    RESOURCE_ID_NEW_MOON,
+    RESOURCE_ID_WAXING_CRESCENT,
+    RESOURCE_ID_FIRST_QUARTER,
+    RESOURCE_ID_WAXING_GIBBOUS,
+    RESOURCE_ID_FULL_MOON,
+    RESOURCE_ID_WANING_GIBBOUS,
+    RESOURCE_ID_THIRD_QUARTER,
+    RESOURCE_ID_WANING_CRESCENT
+};
+
 // Static buffers for formatted strings
 static char s_rise_time_buffer[16];
 static char s_set_time_buffer[16];
@@ -111,12 +123,20 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
     if (!body_name) {
         return false;
     }
-
-    uint32_t resource_id = body_info_get_resource_id(body_id);
-
+    
     // Determine body characteristics
     bool is_moon = (body_id == 0);
     bool can_have_rise_set = (body_id <= 8);  // Moon (0) and planets (1-8)
+
+    uint32_t resource_id;
+    if (is_moon && phase < sizeof(MOON_PHASE_RESOURCE_IDS)/sizeof(MOON_PHASE_RESOURCE_IDS[0])) {
+        // For Moon, use phase-specific resource ID
+        resource_id = MOON_PHASE_RESOURCE_IDS[phase];
+    } else {
+        // For planets and other bodies, use the default resource ID
+        resource_id = body_info_get_resource_id(body_id);
+    }
+
 
     // Format the content structure
     content->title_text = body_name;
