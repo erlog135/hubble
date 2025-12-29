@@ -1,7 +1,7 @@
 // Message processing utilities for body/details window
 /**
- * BodyPackage bit layout (8 bytes):
- * body id (8 bit uint)
+ * BodyPackage bit layout (7 bytes):
+ * body id (5 bit uint) + phase (3 bit uint)
  * azimuth (9 bit uint) 0-360 degrees
  * altitude (8 bit signed) -90 to 90 degrees
  * rise hour (5 bit uint) 0-23
@@ -9,8 +9,6 @@
  * set hour (5 bit uint) 0-23
  * set minute (6 bit uint) 0-59
  * luminance * 10 (9 bit signed) -256 to 255
- * phase (3 bit uint) 0-7 (ignored unless moon)
- * +5 bits padding
  */
 
 var Keys = require('message_keys');
@@ -26,7 +24,29 @@ var BODY_NAMES = [
   "Saturn",
   "Uranus",
   "Neptune",
-  "Pluto"
+  "Pluto",
+  "Sun",
+  //+12 traditional zodiac constellations
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Cancer",
+  "Leo",
+  "Virgo",
+  "Libra",
+  "Scorpius",
+  "Sagittarius",
+  "Capricornus",
+  "Aquarius",
+  "Pisces",
+  //+7 other notable ones
+  "Orion",
+  "Ursa Major",
+  "Ursa Minor",
+  "Cassiopeia",
+  "Cygnus",
+  "Crux",
+  "Lyra"
 ];
 
 var SENTINEL_HOUR = 31;   // fits in 5 bits
@@ -106,10 +126,10 @@ function packBodyPackage(bodyId, observer, date) {
   var az = horizontal ? encodeUnsigned(horizontal.azimuth || 0, 9, 0, 360) : 0;
   var alt = horizontal ? encodeSigned(horizontal.altitude || 0, 8, -90, 90) : 0;
 
-  var riseHour = riseSet.rise ? riseSet.rise.getUTCHours() : SENTINEL_HOUR;
-  var riseMin = riseSet.rise ? riseSet.rise.getUTCMinutes() : SENTINEL_MIN;
-  var setHour = riseSet.set ? riseSet.set.getUTCHours() : SENTINEL_HOUR;
-  var setMin = riseSet.set ? riseSet.set.getUTCMinutes() : SENTINEL_MIN;
+  var riseHour = riseSet.rise ? riseSet.rise.getHours() : SENTINEL_HOUR;
+  var riseMin = riseSet.rise ? riseSet.rise.getMinutes() : SENTINEL_MIN;
+  var setHour = riseSet.set ? riseSet.set.getHours() : SENTINEL_HOUR;
+  var setMin = riseSet.set ? riseSet.set.getMinutes() : SENTINEL_MIN;
 
 
   console.log('Rise/set: ' + riseHour + ':' + riseMin + ' - ' + setHour + ':' + setMin);
@@ -119,7 +139,7 @@ function packBodyPackage(bodyId, observer, date) {
   var lumTimes10 = encodeSigned((illum && illum.mag != null) ? illum.mag * 10 : 0, 9, -256, 255);
   var phaseIndex = encodeUnsigned(phase, 3, 0, 7);
 
-  var buffer = new Uint8Array(8);
+  var buffer = new Uint8Array(7);
   var bitPos = 0;
   function write(value, width) {
     for (var i = 0; i < width; i++) {
@@ -133,7 +153,8 @@ function packBodyPackage(bodyId, observer, date) {
     }
   }
 
-  write(encodeUnsigned(bodyId, 8, 0, 255), 8);
+  write(encodeUnsigned(bodyId, 5, 0, 31), 5);
+  write(phaseIndex, 3);
   write(az, 9);
   write(alt, 8);
   write(encodeUnsigned(riseHour, 5, 0, 31), 5);
@@ -141,8 +162,6 @@ function packBodyPackage(bodyId, observer, date) {
   write(encodeUnsigned(setHour, 5, 0, 31), 5);
   write(encodeUnsigned(setMin, 6, 0, 63), 6);
   write(lumTimes10, 9);
-  write(phaseIndex, 3);
-  write(0, 5); // padding
 
   return buffer;
 }

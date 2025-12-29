@@ -7,7 +7,8 @@
   ],
   "private": true,
   "dependencies": {
-    "astronomy-engine": "^2.1.19"
+    "astronomy-engine": "^2.1.19",
+    "geomagnetism": "^0.2.0"
   },
   "pebble": {
     "displayName": "Hubble",
@@ -30,14 +31,15 @@
     },
     "messageKeys": [
       "REQUEST_BODY",
-      "BODY_PACKAGE"
+      "BODY_PACKAGE",
+      "MAGNETIC_DECLINATION"
     ],
     "resources": {
       "media": [
         {
           "type": "bitmap",
           "name": "MENU_ICON",
-          "file": "Icon_25px.png",
+          "file": "Hubble_25px.png",
           "menuIcon": true
         },
         {

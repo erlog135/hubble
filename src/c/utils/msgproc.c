@@ -3,7 +3,7 @@
 #include <string.h>
 
 // BodyPackage bit field layout constants
-#define BODY_ID_BITS 8
+#define BODY_ID_BITS 5
 #define AZIMUTH_BITS 9
 #define ALTITUDE_BITS 8
 #define RISE_HOUR_BITS 5
@@ -12,7 +12,6 @@
 #define SET_MINUTE_BITS 6
 #define LUMINANCE_BITS 9
 #define PHASE_BITS 3
-#define PADDING_BITS 5
 
 // Sentinel values for invalid times
 #define SENTINEL_HOUR 31
@@ -81,17 +80,20 @@ static int32_t decode_signed(uint32_t value, int bits) {
 }
 
 bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsContent *content) {
-    if (!data || length != 8 || !content) {
+    if (!data || length != 7 || !content) {
         return false;
     }
 
     int bit_pos = 0;
 
-    // Read body ID (8 bits)
+    // Read body ID (5 bits)
     uint32_t body_id = read_bits(data, length, &bit_pos, BODY_ID_BITS);
     if ((int)body_id >= NUM_BODIES) {
         return false;
     }
+
+    // Read phase (3 bits, 0-7, only used for Moon)
+    uint32_t phase = read_bits(data, length, &bit_pos, PHASE_BITS);
 
     // Read azimuth (9 bits, unsigned 0-360)
     uint32_t azimuth = read_bits(data, length, &bit_pos, AZIMUTH_BITS);
@@ -111,12 +113,6 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
     // Read luminance (9 bits signed, represents value * 10)
     uint32_t lum_raw = read_bits(data, length, &bit_pos, LUMINANCE_BITS);
     int32_t luminance_x10 = decode_signed(lum_raw, LUMINANCE_BITS);
-
-    // Read phase (3 bits, 0-7, only used for Moon)
-    uint32_t phase = read_bits(data, length, &bit_pos, PHASE_BITS);
-
-    // Skip padding (5 bits)
-    read_bits(data, length, &bit_pos, PADDING_BITS);
 
     // Get body name and resource ID
     const char *body_name = body_info_get_name(body_id);

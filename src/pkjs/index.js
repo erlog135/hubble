@@ -1,6 +1,7 @@
 var Observer = require('./astronomy/observer');
 var Bodies = require('./astronomy/bodies');
 var MsgProc = require('./msgproc');
+var Declination = require('./declination');
 
 var activeObserver = null;
 var phaseNames = [
@@ -25,6 +26,11 @@ Pebble.addEventListener('ready', function() {
     // Register handler for body data requests from watch
     MsgProc.registerBodyRequestHandler(function() { return activeObserver; });
     console.log('Body request handler registered');
+
+    // Calculate and send magnetic declination
+    var declination = Declination.getMagneticDeclination(activeObserver);
+    //TODO: Uncomment this when we have a way to store the declination
+    //Declination.sendMagneticDeclination(declination);
 
     var phaseIndex = Bodies.getMoonPhase(new Date());
     console.log('Current Moon Phase: ' + phaseNames[phaseIndex] +

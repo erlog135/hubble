@@ -87,7 +87,7 @@ static void prv_inbox_received_callback(DictionaryIterator *iter, void *context)
             uint8_t *data = body_package_tuple->value->data;
             uint16_t length = body_package_tuple->length;
 
-            if (length == 8) {
+            if (length == 7) {
                 // Unpack the body package
                 DetailsContent content;
                 if (msgproc_unpack_body_package(data, length, &content)) {

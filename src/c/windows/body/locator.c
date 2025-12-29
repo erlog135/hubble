@@ -2,6 +2,7 @@
 #include "../../providers/altitude_provider.h"
 #include "../../providers/azimuth_provider.h"
 #include "../../style.h"
+#include <pebble.h>
 #include <string.h>
 
 #define GRID_MARGIN 0
@@ -81,6 +82,7 @@ static void prv_light_toggle_click_handler(ClickRecognizerRef recognizer, void *
   (void)recognizer;
   (void)context;
   s_light_enabled = !s_light_enabled;
+  light_enable(s_light_enabled);
   prv_update_action_icons();
 }
 
@@ -226,6 +228,10 @@ static void prv_window_load(Window *window) {
 }
 
 static void prv_window_unload(Window *window) {
+  // Disable light when going back
+  light_enable(false);
+  s_light_enabled = false;
+
   for (int row = 0; row < GRID_ROWS; ++row) {
     for (int col = 0; col < GRID_COLS; ++col) {
       if (s_target_grid[row][col]) {
