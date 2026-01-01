@@ -80,7 +80,7 @@ function packBodyPackage(bodyId, observer, date) {
   var when = date || new Date();
 
   // Determine body type
-  var canHaveRiseSet = (bodyId <= 8);  // Moon (0) and planets (1-8)
+  var canHaveRiseSet = (bodyId <= 9);  // Moon (0), planets (1-8), and Sun (9)
 
   var horizontal = null;
   try {

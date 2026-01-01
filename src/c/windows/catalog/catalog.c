@@ -1,6 +1,6 @@
 #include "catalog.h"
-#include "moons.h"
 #include "planets.h"
+#include "../body/details.h"
 #include "../../style.h"
 
 static Window *s_window;
@@ -14,11 +14,14 @@ static void prv_menu_select_callback(int index, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Catalog menu selected: %s", s_menu_items[index].title);
 
   switch (index) {
-    case 0:  // Moons
-      moons_menu_show();
+    case 0:  // Moon
+      details_show_body(0);
       break;
     case 1:  // Planets
       planets_menu_show();
+      break;
+    case 2:  // Stars
+      details_show_body(9);
       break;
     default:
       vibes_short_pulse();
@@ -37,7 +40,7 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
 
   s_menu_items[0] = (SimpleMenuItem){
-      .title = "Moon",
+      .title = "The Moon",
       .callback = prv_menu_select_callback,
   };
   s_menu_items[1] = (SimpleMenuItem){
@@ -45,7 +48,7 @@ static void prv_window_load(Window *window) {
       .callback = prv_menu_select_callback,
   };
   s_menu_items[2] = (SimpleMenuItem){
-      .title = "Stars",
+      .title = "The Sun",
       .callback = prv_menu_select_callback,
   };
   s_menu_items[3] = (SimpleMenuItem){

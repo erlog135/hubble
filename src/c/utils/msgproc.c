@@ -122,7 +122,7 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
     
     // Determine body characteristics
     bool is_moon = (body_id == 0);
-    bool can_have_rise_set = (body_id <= 8);  // Moon (0) and planets (1-8)
+    bool can_have_rise_set = (body_id <= 9);  // Moon (0), planets (1-8), and Sun (9)
 
     uint32_t resource_id;
     if (is_moon && phase < sizeof(MOON_PHASE_RESOURCE_IDS)/sizeof(MOON_PHASE_RESOURCE_IDS[0])) {

@@ -11,21 +11,23 @@ const char* BODY_NAMES[] = {
   "Saturn",
   "Uranus",
   "Neptune",
-  "Pluto"
+  "Pluto",
+  "Sun"
 };
 
 // Resource IDs for body images (using RESOURCE_ID_FULL_MOON as placeholder)
 // TODO: Replace with actual resource IDs when images are available
 const uint32_t BODY_RESOURCE_IDS[] = {
-  RESOURCE_ID_FULL_MOON,  // Moon
-  RESOURCE_ID_PLANET_MERCURY,  // Mercury
-  RESOURCE_ID_PLANET_VENUS,  // Venus
-  RESOURCE_ID_PLANET_MARS,  // Mars
-  RESOURCE_ID_PLANET_JUPITER,  // Jupiter
-  RESOURCE_ID_PLANET_SATURN,  // Saturn
-  RESOURCE_ID_PLANET_URANUS,  // Uranus
-  RESOURCE_ID_PLANET_NEPTUNE,  // Neptune
-  RESOURCE_ID_PLANET_PLUTO   // Pluto
+  RESOURCE_ID_FULL_MOON,
+  RESOURCE_ID_PLANET_MERCURY,
+  RESOURCE_ID_PLANET_VENUS,
+  RESOURCE_ID_PLANET_MARS,
+  RESOURCE_ID_PLANET_JUPITER,
+  RESOURCE_ID_PLANET_SATURN,
+  RESOURCE_ID_PLANET_URANUS,
+  RESOURCE_ID_PLANET_NEPTUNE,
+  RESOURCE_ID_PLANET_PLUTO,
+  RESOURCE_ID_SUN 
 };
 
 const int NUM_BODIES = sizeof(BODY_NAMES) / sizeof(BODY_NAMES[0]);
