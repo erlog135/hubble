@@ -3,6 +3,10 @@ var Bodies = require('./astronomy/bodies');
 var MsgProc = require('./msgproc');
 var Declination = require('./declination');
 
+var Clay = require('@rebble/clay');
+var clayConfig = require('./config');
+var clay = new Clay(clayConfig);
+
 var activeObserver = null;
 var phaseNames = [
   "New Moon",

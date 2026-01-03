@@ -1,0 +1,22 @@
+#include "settings.h"
+
+
+ClaySettings* settings_get() {
+    return &settings;
+}
+
+void settings_save() {
+    persist_write_data(SETTINGS_KEY, &settings, sizeof(settings));
+}
+
+void settings_load_default() {
+    settings.favorites = 0; // all off
+}
+
+void settings_load() {
+    settings_load_default();
+
+    if(!persist_exists(SETTINGS_KEY)) return;
+
+    persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
+}

@@ -42,12 +42,6 @@ static void prv_on_refresh(ActionMenu *menu, const ActionMenuItem *action, void 
   (void)context;
 }
 
-static void prv_on_hide(ActionMenu *menu, const ActionMenuItem *action, void *context) {
-  // Placeholder: no-op for now.
-  (void)menu;
-  (void)action;
-  (void)context;
-}
 
 static void prv_on_close(ActionMenu *menu, const ActionMenuItem *performed_action, void *context) {
   (void)menu;
@@ -62,11 +56,10 @@ void options_menu_show(void) {
   }
 
   const Layout *layout = layout_get();
-  s_root = action_menu_level_create(4);
+  s_root = action_menu_level_create(3);
   action_menu_level_add_action(s_root, "Locate", prv_on_locate, NULL);
   action_menu_level_add_action(s_root, "Refresh", prv_on_refresh, NULL);
   action_menu_level_add_action(s_root, "Favorite", prv_on_favorite, NULL);
-  action_menu_level_add_action(s_root, "Hide", prv_on_hide, NULL);
 
   ActionMenuConfig config = (ActionMenuConfig){
       .root_level = s_root,

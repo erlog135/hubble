@@ -1,8 +1,11 @@
 #include <pebble.h>
 #include "windows/home.h"
 #include "utils/bodymsg.h"
+#include "utils/settings.h"
 
 static void prv_init(void) {
+  settings_load();
+  APP_LOG(APP_LOG_LEVEL_INFO, "Settings: %d", settings.favorites);
   bodymsg_init();
   home_init();
   home_show();

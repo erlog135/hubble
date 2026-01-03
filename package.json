@@ -7,20 +7,19 @@
   ],
   "private": true,
   "dependencies": {
+    "@rebble/clay": "^1.0.6",
     "astronomy-engine": "^2.1.19",
     "geomagnetism": "^0.2.0"
   },
+  "capabilities": [
+    "configurable"
+  ],
   "pebble": {
     "displayName": "Hubble",
     "uuid": "4fca3013-c56a-4870-8629-81b379f917e0",
     "sdkVersion": "3",
     "enableMultiJS": true,
     "targetPlatforms": [
-      "aplite",
-      "basalt",
-      "chalk",
-      "diorite",
-      "emery",
       "flint"
     ],
     "capabilities": [
@@ -32,7 +31,12 @@
     "messageKeys": [
       "REQUEST_BODY",
       "BODY_PACKAGE",
-      "MAGNETIC_DECLINATION"
+      "REQUEST_DECLINATION",
+      "DECLINATION",
+      "CFG_FAVORITES",
+      "CFG_SUN_EVENTS",
+      "CFG_MOON_EVENTS",
+      "CFG_PLANET_EVENTS"
     ],
     "resources": {
       "media": [

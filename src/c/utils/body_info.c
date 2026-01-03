@@ -12,7 +12,26 @@ const char* BODY_NAMES[] = {
   "Uranus",
   "Neptune",
   "Pluto",
-  "Sun"
+  "Sun",
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Cancer",
+  "Leo",
+  "Virgo",
+  "Libra",
+  "Scorpius",
+  "Sagittarius",
+  "Capricornus",
+  "Aquarius",
+  "Pisces",
+  "Orion",
+  "Ursa Major",
+  "Ursa Minor",
+  "Cassiopeia",
+  "Cygnus",
+  "Crux",
+  "Lyra"
 };
 
 // Resource IDs for body images (using RESOURCE_ID_FULL_MOON as placeholder)
