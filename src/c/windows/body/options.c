@@ -1,7 +1,7 @@
 #include "options.h"
 #include "locator.h"
 #include "details.h"
-#include "action_result.h"
+#include "../favorites.h"
 #include "../../style.h"
 #include "../../utils/settings.h"
 
@@ -28,19 +28,25 @@ static void prv_on_favorite(ActionMenu *menu, const ActionMenuItem *action, void
     LocalSettings *settings = settings_get();
     bool was_favorited = (settings->favorites & (1 << body_id)) != 0;
 
-    // Toggle the favorite bit
-    if (was_favorited) {
-      settings->favorites &= ~(1 << body_id);
-    } else {
-      settings->favorites |= (1 << body_id);
-    }
+      // Toggle the favorite bit
+      if (was_favorited) {
+        settings->favorites &= ~(1 << body_id);
+      } else {
+        settings->favorites |= (1 << body_id);
+      }
 
-    // Save settings
-    settings_save();
+      // Save settings
+      settings_save();
 
-    // Show result message - the action menu will be automatically dismissed
-    const char *message = was_favorited ? "Unfavorited" : "Favorited";
-    action_result_show(message);
+      // If unfavoriting and we came from favorites menu, remove it from stack
+      if (was_favorited) {
+        Window *favorites_window = favorites_get_window();
+        if (favorites_window && window_stack_contains_window(favorites_window)) {
+          window_stack_remove(favorites_window, true);
+        }
+      }
+
+      // Action menu will be automatically dismissed, returning to body details
   }
 }
 

@@ -145,3 +145,7 @@ void favorites_hide(void) {
     window_stack_remove(s_window, true);
   }
 }
+
+Window* favorites_get_window(void) {
+  return s_window;
+}
