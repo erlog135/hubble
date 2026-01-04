@@ -22,6 +22,8 @@ var phaseNames = [
 Pebble.addEventListener('ready', function() {
   console.log('PebbleKit JS ready!');
 
+  console.log('Settings: ' + localStorage.getItem('clay-settings'));
+
   Observer.initObserver().then(function(observer) {
     activeObserver = observer;
     console.log('Observer ready (lat=' + observer.latitude +

@@ -1,7 +1,7 @@
 #include "settings.h"
 
 
-ClaySettings* settings_get() {
+LocalSettings* settings_get() {
     return &settings;
 }
 

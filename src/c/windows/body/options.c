@@ -1,7 +1,9 @@
 #include "options.h"
 #include "locator.h"
 #include "details.h"
+#include "action_result.h"
 #include "../../style.h"
+#include "../../utils/settings.h"
 
 static ActionMenu *s_menu;
 static ActionMenuLevel *s_root;
@@ -15,10 +17,31 @@ static void prv_destroy_menu(void) {
 }
 
 static void prv_on_favorite(ActionMenu *menu, const ActionMenuItem *action, void *context) {
-  // Placeholder: no-op for now.
   (void)menu;
   (void)action;
   (void)context;
+
+  // Get current details content and toggle favorite status
+  const DetailsContent *content = details_get_current_content();
+  if (content && content->body_id >= 0) {
+    int body_id = content->body_id;
+    LocalSettings *settings = settings_get();
+    bool was_favorited = (settings->favorites & (1 << body_id)) != 0;
+
+    // Toggle the favorite bit
+    if (was_favorited) {
+      settings->favorites &= ~(1 << body_id);
+    } else {
+      settings->favorites |= (1 << body_id);
+    }
+
+    // Save settings
+    settings_save();
+
+    // Show result message - the action menu will be automatically dismissed
+    const char *message = was_favorited ? "Unfavorited" : "Favorited";
+    action_result_show(message);
+  }
 }
 
 static void prv_on_locate(ActionMenu *menu, const ActionMenuItem *action, void *context) {
@@ -59,7 +82,14 @@ void options_menu_show(void) {
   s_root = action_menu_level_create(3);
   action_menu_level_add_action(s_root, "Locate", prv_on_locate, NULL);
   action_menu_level_add_action(s_root, "Refresh", prv_on_refresh, NULL);
-  action_menu_level_add_action(s_root, "Favorite", prv_on_favorite, NULL);
+
+  // Determine favorite action text based on current status
+  const DetailsContent *content = details_get_current_content();
+  const char *favorite_text = "Favorite";
+  if (content && content->body_id >= 0 && (settings_get()->favorites & (1 << content->body_id))) {
+    favorite_text = "Unfavorite";
+  }
+  action_menu_level_add_action(s_root, favorite_text, prv_on_favorite, NULL);
 
   ActionMenuConfig config = (ActionMenuConfig){
       .root_level = s_root,

@@ -24,6 +24,7 @@ typedef struct {
   int16_t azimuth_deg;  // Azimuth in degrees (0-360)
   int16_t altitude_deg; // Altitude in degrees (-90 to 90)
   int16_t illumination_x10; // Illumination as magnitude * 10 (-256 to 255)
+  int body_id;  // Body ID for favoriting (-1 if not applicable)
 } DetailsContent;
 
 void details_init(void);

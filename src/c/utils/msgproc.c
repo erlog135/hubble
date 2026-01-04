@@ -136,6 +136,7 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
 
     // Format the content structure
     content->title_text = body_name;
+    content->body_id = body_id;
 
     // Detail text: for Moon show phase, for others show basic info
     if (is_moon && phase < sizeof(MOON_PHASES)/sizeof(MOON_PHASES[0])) {

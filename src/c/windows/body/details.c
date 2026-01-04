@@ -47,6 +47,7 @@ static const DetailsContent s_default_content = {
     .azimuth_deg = 0,
     .altitude_deg = 0,
     .illumination_x10 = 0,
+    .body_id = 0,  // Moon
 };
 
 static const DetailsContent s_loading_content = {
@@ -62,6 +63,7 @@ static const DetailsContent s_loading_content = {
     .azimuth_deg = 0,
     .altitude_deg = 0,
     .illumination_x10 = 0,
+    .body_id = -1,  // Not a specific body
 };
 
 static GSize prv_get_image_size(void) {
