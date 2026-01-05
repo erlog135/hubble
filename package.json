@@ -9,7 +9,8 @@
   "dependencies": {
     "@rebble/clay": "^1.0.6",
     "astronomy-engine": "^2.1.19",
-    "geomagnetism": "^0.2.0"
+    "geomagnetism": "^0.2.0",
+    "local-reverse-geocoder": "^0.16.7"
   },
   "capabilities": [
     "configurable"

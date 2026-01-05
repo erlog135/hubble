@@ -13,6 +13,7 @@
 
 var Keys = require('message_keys');
 var Bodies = require('./astronomy/bodies');
+var Events = require('./astronomy/events');
 
 // Body names keyed by body id (must stay in sync with watch side)
 var BODY_NAMES = [
@@ -116,7 +117,7 @@ function packBodyPackage(bodyId, observer, date) {
   var phase = 0;
   if (bodyName === 'Moon') {
     try {
-      phase = Bodies.getMoonPhase(when);
+      phase = Events.getMoonPhase(when);
     } catch (err) {
       console.log('Warning: Could not calculate moon phase: ' + err.message);
       phase = 0;

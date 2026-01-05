@@ -1,26 +1,19 @@
 var Observer = require('./astronomy/observer');
 var Bodies = require('./astronomy/bodies');
+var Events = require('./astronomy/events');
 var MsgProc = require('./msgproc');
 var Declination = require('./declination');
-
+var PinPusher = require('./pinpusher');
 var Clay = require('@rebble/clay');
 var clayConfig = require('./config');
 var clay = new Clay(clayConfig);
 
 var activeObserver = null;
-var phaseNames = [
-  "New Moon",
-  "Waxing Crescent",
-  "First Quarter",
-  "Waxing Gibbous",
-  "Full Moon",
-  "Waning Gibbous",
-  "Third Quarter",
-  "Waning Crescent"
-];
 
 Pebble.addEventListener('ready', function() {
   console.log('PebbleKit JS ready!');
+
+  PinPusher.pushTestPin();
 
   console.log('Settings: ' + localStorage.getItem('clay-settings'));
 
@@ -38,13 +31,15 @@ Pebble.addEventListener('ready', function() {
     //TODO: Uncomment this when we have a way to store the declination
     //Declination.sendMagneticDeclination(declination);
 
-    var phaseIndex = Bodies.getMoonPhase(new Date());
-    console.log('Current Moon Phase: ' + phaseNames[phaseIndex] +
+    var phaseIndex = Events.getMoonPhase(new Date());
+    var phaseName = Events.getMoonPhaseName(new Date());
+    console.log('Current Moon Phase: ' + phaseName +
       ' (index ' + phaseIndex + ')');
   }).catch(function(err) {
     console.log('Proceeding without observer: ' + err.message);
-    var phaseIndex = Bodies.getMoonPhase(new Date());
-    console.log('Current Moon Phase: ' + phaseNames[phaseIndex] +
+    var phaseIndex = Events.getMoonPhase(new Date());
+    var phaseName = Events.getMoonPhaseName(new Date());
+    console.log('Current Moon Phase: ' + phaseName +
       ' (index ' + phaseIndex + ')');
   });
 });

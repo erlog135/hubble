@@ -33,17 +33,9 @@ function getRiseSet(body, observer, date) {
   };
 }
 
-//TODO: do all phases span the same angle range? fix if they don't
-function getMoonPhase(date) {
-  var when = date || new Date();
-  var angle = Astronomy.MoonPhase(when); // 0=new, 180=full
-  return Math.floor(((angle + 22.5) % 360) / 45); // 0-7
-}
-
 
 module.exports = {
   getHorizontal: getHorizontal,
   getIllumination: getIllumination,
-  getRiseSet: getRiseSet,
-  getMoonPhase: getMoonPhase
+  getRiseSet: getRiseSet
 };

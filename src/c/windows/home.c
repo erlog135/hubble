@@ -1,24 +1,47 @@
 #include "home.h"
 #include "favorites.h"
-#include "catalog/catalog.h"
+#include "./catalog/planets.h"
+#include "./body/details.h"
 #include "../style.h"
 
 static Window *s_window;
 static SimpleMenuLayer *s_menu_layer;
-static SimpleMenuSection s_menu_sections[1];
-static SimpleMenuItem s_menu_items[4];
+static SimpleMenuSection s_menu_sections[2];
+static SimpleMenuItem s_main_items[2];
+static SimpleMenuItem s_catalog_items[5];
 
-static void prv_menu_select_callback(int index, void *context) {
+static void prv_main_menu_select_callback(int index, void *context) {
 
   switch (index) {
     case 0:  // Favorites
       favorites_show();
       break;
-    case 2:  // Catalog
-      catalog_menu_show();
+    case 1:  // Upcoming
+      APP_LOG(APP_LOG_LEVEL_INFO, "Home menu selected: %s", s_main_items[index].title);
+      vibes_short_pulse();
       break;
     default:
-      APP_LOG(APP_LOG_LEVEL_INFO, "Home menu selected: %s", s_menu_items[index].title);
+      APP_LOG(APP_LOG_LEVEL_INFO, "Home menu selected: %s", s_main_items[index].title);
+      vibes_short_pulse();
+      break;
+  }
+}
+
+static void prv_catalog_menu_select_callback(int index, void *context) {
+
+  APP_LOG(APP_LOG_LEVEL_INFO, "Catalog menu selected: %s", s_catalog_items[index].title);
+
+  switch (index) {
+    case 0:  // Moon
+      details_show_body(0);
+      break;
+    case 1:  // Planets
+      planets_menu_show();
+      break;
+    case 2:  // The Sun
+      details_show_body(9);
+      break;
+    default:
       vibes_short_pulse();
       break;
   }
@@ -30,26 +53,52 @@ static void prv_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
 
-  s_menu_items[0] = (SimpleMenuItem){
+  // Main menu items
+  s_main_items[0] = (SimpleMenuItem){
       .title = "Favorites",
-      .callback = prv_menu_select_callback,
+      .callback = prv_main_menu_select_callback,
   };
-  s_menu_items[1] = (SimpleMenuItem){
+  s_main_items[1] = (SimpleMenuItem){
       .title = "Upcoming",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[2] = (SimpleMenuItem){
-      .title = "Catalog",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[3] = (SimpleMenuItem){
-      .title = "Settings",
-      .callback = prv_menu_select_callback,
+      .callback = prv_main_menu_select_callback,
   };
 
+  // Catalog items
+  s_catalog_items[0] = (SimpleMenuItem){
+      .title = "The Moon",
+      .callback = prv_catalog_menu_select_callback,
+  };
+  s_catalog_items[1] = (SimpleMenuItem){
+      .title = "Planets...",
+      .callback = prv_catalog_menu_select_callback,
+  };
+  s_catalog_items[2] = (SimpleMenuItem){
+      .title = "The Sun",
+      .callback = prv_catalog_menu_select_callback,
+  };
+  s_catalog_items[3] = (SimpleMenuItem){
+      .title = "Constellations...",
+      .subtitle = "Zodiac",
+      .callback = prv_catalog_menu_select_callback,
+  };
+  s_catalog_items[4] = (SimpleMenuItem){
+      .title = "Constellations...",
+      .subtitle = "Other",
+      .callback = prv_catalog_menu_select_callback,
+  };
+
+  // Main menu section
   s_menu_sections[0] = (SimpleMenuSection){
-      .num_items = ARRAY_LENGTH(s_menu_items),
-      .items = s_menu_items,
+      .title = "Menu",
+      .num_items = ARRAY_LENGTH(s_main_items),
+      .items = s_main_items,
+  };
+
+  // Catalog section
+  s_menu_sections[1] = (SimpleMenuSection){
+      .title = "Catalog",
+      .num_items = ARRAY_LENGTH(s_catalog_items),
+      .items = s_catalog_items,
   };
 
   const GRect menu_frame = GRect(bounds.origin.x, bounds.origin.y,
