@@ -13,7 +13,7 @@ var activeObserver = null;
 Pebble.addEventListener('ready', function() {
   console.log('PebbleKit JS ready!');
 
-  //PinPusher.pushTestPin();
+  PinPusher.pushTestPin();
   
   
   Observer.initObserver().then(function(observer) {

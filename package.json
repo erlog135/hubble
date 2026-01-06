@@ -158,7 +158,104 @@
           "type": "raw",
           "name": "SUN",
           "file": "stars/Sun_50px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "ASTRONOMICAL_DAWN_25PX",
+          "file": "timeline/AstronomicalDawn_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "ASTRONOMICAL_DUSK_25PX",
+          "file": "timeline/AstronomicalDusk_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CIVIL_DAWN_25PX",
+          "file": "timeline/CivilDawn_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CIVIL_DUSK_25PX",
+          "file": "timeline/CivilDusk_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "ECLIPSE_25PX",
+          "file": "timeline/Eclipse_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "EQUINOX_25PX",
+          "file": "timeline/Equinox_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "MOONRISE_25PX",
+          "file": "timeline/Moonrise_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "MOONSET_25PX",
+          "file": "timeline/Moonset_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "NAUTICAL_DAWN_25PX",
+          "file": "timeline/NauticalDawn_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "NAUTICAL_DUSK_25PX",
+          "file": "timeline/NauticalDusk_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "RISE_25PX",
+          "file": "timeline/Rise_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "SET_25PX",
+          "file": "timeline/Set_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "SOLSTICE_25PX",
+          "file": "timeline/Solstice_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "SOLSTICE_50PX",
+          "file": "timeline/Solstice_50px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "SOLSTICE_80PX",
+          "file": "timeline/Solstice_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "SUNRISE_25PX",
+          "file": "timeline/Sunrise_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "SUNSET_25PX",
+          "file": "timeline/Sunset_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "TRANSIT_25PX",
+          "file": "timeline/Transit_25px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "APSIS_25PX",
+          "file": "timeline/Apsis_25px.pdc"
         }
+      ],
+      "publishedMedia": [
       ]
     }
   }
