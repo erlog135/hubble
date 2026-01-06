@@ -13,33 +13,33 @@ var activeObserver = null;
 Pebble.addEventListener('ready', function() {
   console.log('PebbleKit JS ready!');
 
-  PinPusher.pushTestPin();
-
-  console.log('Settings: ' + localStorage.getItem('clay-settings'));
-
+  //PinPusher.pushTestPin();
+  
+  
   Observer.initObserver().then(function(observer) {
     activeObserver = observer;
     console.log('Observer ready (lat=' + observer.latitude +
       ', lon=' + observer.longitude + ', h=' + observer.height + ')');
+      
+      // Register handler for body data requests from watch
+      MsgProc.registerBodyRequestHandler(function() { return activeObserver; });
+      console.log('Body request handler registered');
+      
+      console.log('Settings: ' + localStorage.getItem('clay-settings'));
+     console.log('All events: ' + JSON.stringify(Events.getAllEvents(activeObserver, new Date())));
+      
+      // Calculate and send magnetic declination
+      var declination = Declination.getMagneticDeclination(activeObserver);
+      //Declination.sendMagneticDeclination(declination);
+    }).catch(function(err) {
+      console.log('Proceeding without observer: ' + err.message);
+      var phaseIndex = Events.getMoonPhase(new Date());
+      var phaseName = Events.getMoonPhaseName(new Date());
+      console.log('Current Moon Phase: ' + phaseName +
+        ' (index ' + phaseIndex + ')');
+      });
+      
+      
 
-    // Register handler for body data requests from watch
-    MsgProc.registerBodyRequestHandler(function() { return activeObserver; });
-    console.log('Body request handler registered');
 
-    // Calculate and send magnetic declination
-    var declination = Declination.getMagneticDeclination(activeObserver);
-    //TODO: Uncomment this when we have a way to store the declination
-    //Declination.sendMagneticDeclination(declination);
-
-    var phaseIndex = Events.getMoonPhase(new Date());
-    var phaseName = Events.getMoonPhaseName(new Date());
-    console.log('Current Moon Phase: ' + phaseName +
-      ' (index ' + phaseIndex + ')');
-  }).catch(function(err) {
-    console.log('Proceeding without observer: ' + err.message);
-    var phaseIndex = Events.getMoonPhase(new Date());
-    var phaseName = Events.getMoonPhaseName(new Date());
-    console.log('Current Moon Phase: ' + phaseName +
-      ' (index ' + phaseIndex + ')');
-  });
 });

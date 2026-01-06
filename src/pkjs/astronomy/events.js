@@ -8,6 +8,12 @@
 
 var Astronomy = require('astronomy-engine');
 
+// Cache for events with timestamp and observer info
+// Cache key format: "lat_lon_date" where lat/lon rounded to 2 decimal places, date to day
+var eventsCache = {};
+var CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+var LOCATION_THRESHOLD_DEGREES = 0.01; // ~1km threshold for significant movement
+
 function resolveBody(body) {
   if (!body) {
     throw new Error('Body is required');
@@ -72,13 +78,13 @@ function getRiseSetSequence(body, observer, date) {
 
   // Helper function to find the next event in a direction
   function findNextEvent(direction, startDate) {
-    return Astronomy.SearchRiseSet(resolvedBody, observer, direction, startDate, 365);
+    return Astronomy.SearchRiseSet(resolvedBody, observer, direction, startDate, 30);
   }
 
   // Helper function to find the previous event by searching backwards
   function findPreviousEvent(direction, startDate) {
     // Use negative limitDays to search backwards from startDate
-    return Astronomy.SearchRiseSet(resolvedBody, observer, direction, startDate, -365);
+    return Astronomy.SearchRiseSet(resolvedBody, observer, direction, startDate, -30);
   }
 
   // Get rise events
@@ -165,13 +171,13 @@ function getTwilightSequence(body, observer, date, twilightType) {
 
   // Helper function to find the next altitude event
   function findNextAltitudeEvent(direction, startDate) {
-    return Astronomy.SearchAltitude(resolvedBody, observer, direction, startDate, 365, altitude);
+    return Astronomy.SearchAltitude(resolvedBody, observer, direction, startDate, 30, altitude);
   }
 
   // Helper function to find the previous altitude event by searching backwards
   function findPreviousAltitudeEvent(direction, startDate) {
     // Use negative limitDays to search backwards from startDate
-    return Astronomy.SearchAltitude(resolvedBody, observer, direction, startDate, -365, altitude);
+    return Astronomy.SearchAltitude(resolvedBody, observer, direction, startDate, -30, altitude);
   }
 
   // Get dawn events (body ascending through altitude, so direction +1)
@@ -226,11 +232,11 @@ function getNextSeasonalEvent(date) {
 
   // Create array of all seasonal events for current and next year
   var seasonalEvents = [
-    { type: 'marchEquinox', date: currentYearSeasons.march_equinox.date, year: currentYear },
-    { type: 'juneSolstice', date: currentYearSeasons.june_solstice.date, year: currentYear },
-    { type: 'septemberEquinox', date: currentYearSeasons.september_equinox.date, year: currentYear },
-    { type: 'decemberSolstice', date: currentYearSeasons.december_solstice.date, year: currentYear },
-    { type: 'marchEquinox', date: nextYearSeasons.march_equinox.date, year: currentYear + 1 }
+    { type: 'marchEquinox', date: currentYearSeasons.mar_equinox.date, year: currentYear },
+    { type: 'juneSolstice', date: currentYearSeasons.jun_solstice.date, year: currentYear },
+    { type: 'septemberEquinox', date: currentYearSeasons.sep_equinox.date, year: currentYear },
+    { type: 'decemberSolstice', date: currentYearSeasons.dec_solstice.date, year: currentYear },
+    { type: 'marchEquinox', date: nextYearSeasons.mar_equinox.date, year: currentYear + 1 }
   ];
 
   // Find the next event after the reference date
@@ -396,6 +402,284 @@ function getNextLunarApsis(date) {
   };
 }
 
+/**
+ * Check if cached events are still valid (within time limit and observer hasn't moved significantly)
+ * @param {Object} cacheEntry - The cached entry with timestamp and observer
+ * @param {Observer} observer - Current observer location
+ * @returns {boolean} True if cache is valid
+ */
+function isCacheValid(cacheEntry, observer) {
+  var now = new Date().getTime();
+  var timeDiff = now - cacheEntry.timestamp;
+
+  // Check if cache is expired
+  if (timeDiff > CACHE_DURATION_MS) {
+    return false;
+  }
+
+  // Check if observer has moved significantly
+  var latDiff = Math.abs(cacheEntry.observer.latitude - observer.latitude);
+  var lonDiff = Math.abs(cacheEntry.observer.longitude - observer.longitude);
+
+  return latDiff <= LOCATION_THRESHOLD_DEGREES && lonDiff <= LOCATION_THRESHOLD_DEGREES;
+}
+
+/**
+ * Generate cache key based on observer location, date, and settings
+ * @param {Observer} observer - Observer location
+ * @param {Date} date - Reference date
+ * @param {Object} settings - Clay settings object
+ * @returns {string} Cache key
+ */
+function generateCacheKey(observer, date, settings) {
+  var lat = Math.round(observer.latitude * 100) / 100; // Round to 2 decimal places
+  var lon = Math.round(observer.longitude * 100) / 100; // Round to 2 decimal places
+  var dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+  // Create a hash of the settings to include in cache key
+  var settingsHash = '';
+  if (settings) {
+    var keys = Object.keys(settings).sort();
+    settingsHash = keys.map(function(key) {
+      var value = settings[key];
+      if (Array.isArray(value)) {
+        return value.join(',');
+      }
+      return String(value);
+    }).join('|');
+  }
+
+  return lat + '_' + lon + '_' + dateStr + '_' + settingsHash;
+}
+
+/**
+ * Get all available astronomical events for the given observer and date.
+ * Results are cached for 30 minutes if the observer hasn't moved significantly.
+ * @param {Observer} observer - The observer location
+ * @param {Date} date - The reference date (defaults to today)
+ * @param {Object} settings - Clay settings object controlling which events to include
+ * @returns {Object} Object containing all available astronomical events based on settings
+ */
+function getAllEvents(observer, date, settings) {
+  var referenceDate = date || new Date();
+  var cacheKey = generateCacheKey(observer, referenceDate, settings);
+
+  // Parse settings (default to enabled if not provided)
+  var cfg = settings || {};
+  var sunRiseSet = cfg.CFG_SUN_RISE_SET !== false;
+  var sunCivilTwilight = cfg.CFG_SUN_CIVIL_DAWN_DUSK !== false;
+  var sunNauticalTwilight = cfg.CFG_SUN_NAUTICAL_DAWN_DUSK !== false;
+  var sunAstronomicalTwilight = cfg.CFG_SUN_ASTRONOMICAL_DAWN_DUSK !== false;
+  var sunSolstices = cfg.CFG_SUN_SOLSTICES !== false;
+  var sunEquinoxes = cfg.CFG_SUN_EQUINOXES !== false;
+  var sunEclipses = cfg.CFG_SUN_ECLIPSES !== false;
+  var sunSolarTransits = cfg.CFG_SUN_SOLAR_TRANSITS !== false;
+  var moonRiseSet = cfg.CFG_MOON_RISE_SET !== false;
+  var moonApogeePerigee = cfg.CFG_MOON_APOGEE_PERIGEE !== false;
+  var planetEvents = cfg.CFG_PLANET_EVENTS || [false, false, false, false, false, false, false, false];
+
+  // Check cache first
+  if (eventsCache[cacheKey] && isCacheValid(eventsCache[cacheKey], observer)) {
+    return eventsCache[cacheKey].events;
+  }
+
+  // Calculate all events
+  var events = {
+    riseSetEvents: [],
+    twilightEvents: [],
+    seasonalEvents: [],
+    transitEvents: [],
+    eclipseEvents: [],
+    lunarApsisEvents: []
+  };
+
+  // Get bodies to check for rise/set events based on settings
+  var bodies = [];
+  if (sunRiseSet) bodies.push('Sun');
+  if (moonRiseSet) bodies.push('Moon');
+  // Planet events array: [Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto]
+  if (planetEvents[1]) bodies.push('Venus');  // Venus
+  if (planetEvents[2]) bodies.push('Mars');   // Mars
+  if (planetEvents[3]) bodies.push('Jupiter'); // Jupiter
+  if (planetEvents[4]) bodies.push('Saturn');  // Saturn
+  if (planetEvents[0]) bodies.push('Mercury'); // Mercury
+  if (planetEvents[5]) bodies.push('Uranus');  // Uranus
+  if (planetEvents[6]) bodies.push('Neptune'); // Neptune
+  if (planetEvents[7]) bodies.push('Pluto');   // Pluto
+
+  // Get rise/set events for all bodies
+  bodies.forEach(function(body) {
+    try {
+      var riseSet = getRiseSetSequence(body, observer, referenceDate);
+      riseSet.rise.forEach(function(riseTime, index) {
+        if (riseTime) {
+          var event = {
+            type: 'rise',
+            body: body,
+            time: riseTime
+          };
+          if (body === 'Moon' && riseSet.moonPhases && riseSet.moonPhases[index]) {
+            event.moonPhase = riseSet.moonPhases[index];
+          }
+          events.riseSetEvents.push(event);
+        }
+      });
+      riseSet.set.forEach(function(setTime) {
+        if (setTime) {
+          events.riseSetEvents.push({
+            type: 'set',
+            body: body,
+            time: setTime
+          });
+        }
+      });
+    } catch (e) {
+      // Skip bodies that might not be visible or calculable
+      console.log('Error getting rise/set for ' + body + ':', e.message);
+    }
+  });
+
+  // Get twilight events for Sun
+  try {
+    if (sunCivilTwilight) {
+      var civilTwilight = getTwilightSequence('Sun', observer, referenceDate, 'civil');
+      civilTwilight.dawn.forEach(function(dawnTime) {
+        if (dawnTime) {
+          events.twilightEvents.push({
+            type: 'dawn',
+            subtype: 'civil',
+            time: dawnTime
+          });
+        }
+      });
+      civilTwilight.dusk.forEach(function(duskTime) {
+        if (duskTime) {
+          events.twilightEvents.push({
+            type: 'dusk',
+            subtype: 'civil',
+            time: duskTime
+          });
+        }
+      });
+    }
+
+    if (sunNauticalTwilight) {
+      var nauticalTwilight = getTwilightSequence('Sun', observer, referenceDate, 'nautical');
+      nauticalTwilight.dawn.forEach(function(dawnTime) {
+        if (dawnTime) {
+          events.twilightEvents.push({
+            type: 'dawn',
+            subtype: 'nautical',
+            time: dawnTime
+          });
+        }
+      });
+      nauticalTwilight.dusk.forEach(function(duskTime) {
+        if (duskTime) {
+          events.twilightEvents.push({
+            type: 'dusk',
+            subtype: 'nautical',
+            time: duskTime
+          });
+        }
+      });
+    }
+
+    if (sunAstronomicalTwilight) {
+      var astronomicalTwilight = getTwilightSequence('Sun', observer, referenceDate, 'astronomical');
+      astronomicalTwilight.dawn.forEach(function(dawnTime) {
+        if (dawnTime) {
+          events.twilightEvents.push({
+            type: 'dawn',
+            subtype: 'astronomical',
+            time: dawnTime
+          });
+        }
+      });
+      astronomicalTwilight.dusk.forEach(function(duskTime) {
+        if (duskTime) {
+          events.twilightEvents.push({
+            type: 'dusk',
+            subtype: 'astronomical',
+            time: duskTime
+          });
+        }
+      });
+    }
+  } catch (e) {
+    console.log('Error getting twilight events:', e.message);
+  }
+
+  // Get seasonal events (equinoxes/solstices)
+  if (sunSolstices || sunEquinoxes) {
+    try {
+      var seasonalEvent = getNextSeasonalEvent(referenceDate);
+      if (seasonalEvent) {
+        events.seasonalEvents.push(seasonalEvent);
+      }
+    } catch (e) {
+      console.log('Error getting seasonal events:', e.message);
+    }
+  }
+
+  // Get transit events
+  if (sunSolarTransits) {
+    try {
+      var transitEvent = getNextTransit(referenceDate);
+      if (transitEvent && transitEvent.start) {
+        events.transitEvents.push(transitEvent);
+      }
+    } catch (e) {
+      console.log('Error getting transit events:', e.message);
+    }
+  }
+
+  // Get eclipse events
+  if (sunEclipses) {
+    try {
+      var eclipseEvent = getNextEclipse(referenceDate);
+      if (eclipseEvent && eclipseEvent.peak) {
+        events.eclipseEvents.push(eclipseEvent);
+      }
+    } catch (e) {
+      console.log('Error getting eclipse events:', e.message);
+    }
+  }
+
+  // Get lunar apsis events
+  if (moonApogeePerigee) {
+    try {
+      var apsisEvent = getNextLunarApsis(referenceDate);
+      if (apsisEvent && apsisEvent.time) {
+        events.lunarApsisEvents.push(apsisEvent);
+      }
+    } catch (e) {
+      console.log('Error getting lunar apsis events:', e.message);
+    }
+  }
+
+  // Sort events by time within each category
+  Object.keys(events).forEach(function(category) {
+    events[category].sort(function(a, b) {
+      var timeA = a.time || a.start || a.peak || a.date;
+      var timeB = b.time || b.start || b.peak || b.date;
+      return timeA - timeB;
+    });
+  });
+
+  // Cache the results
+  eventsCache[cacheKey] = {
+    timestamp: new Date().getTime(),
+    observer: {
+      latitude: observer.latitude,
+      longitude: observer.longitude
+    },
+    events: events
+  };
+
+  return events;
+}
+
 module.exports = {
   isDateInTimelineRange,
   getRiseSetSequence,
@@ -405,5 +689,6 @@ module.exports = {
   getNextEclipse,
   getNextLunarApsis,
   getMoonPhase,
-  getMoonPhaseName
+  getMoonPhaseName,
+  getAllEvents
 };
