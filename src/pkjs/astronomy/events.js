@@ -681,7 +681,6 @@ function getAllEvents(observer, date, settings) {
 }
 
 module.exports = {
-  isDateInTimelineRange,
   getRiseSetSequence,
   getTwilightSequence,
   getNextSeasonalEvent,

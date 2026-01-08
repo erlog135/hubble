@@ -13,21 +13,36 @@ var activeObserver = null;
 Pebble.addEventListener('ready', function() {
   console.log('PebbleKit JS ready!');
 
+  // Get current clay settings
+  var claySettingsString = localStorage.getItem('clay-settings');
+  var claySettings = {};
+  if (claySettingsString) {
+    try {
+      claySettings = JSON.parse(claySettingsString);
+    } catch (e) {
+      console.log('Error parsing clay settings:', e);
+    }
+  }
+  console.log('Current clay settings:', JSON.stringify(claySettings));
+
   PinPusher.pushTestPin();
-  
-  
+
   Observer.initObserver().then(function(observer) {
     activeObserver = observer;
     console.log('Observer ready (lat=' + observer.latitude +
       ', lon=' + observer.longitude + ', h=' + observer.height + ')');
-      
+
       // Register handler for body data requests from watch
       MsgProc.registerBodyRequestHandler(function() { return activeObserver; });
       console.log('Body request handler registered');
+
+      //console.log('Settings: ' + localStorage.getItem('clay-settings'));
+     //console.log('All events: ' + JSON.stringify(Events.getAllEvents(activeObserver, new Date())));
+
+      // Push astronomy events to timeline
+      //PinPusher.pushAstronomyEvents(activeObserver, new Date(), claySettings);
       
-      console.log('Settings: ' + localStorage.getItem('clay-settings'));
-     console.log('All events: ' + JSON.stringify(Events.getAllEvents(activeObserver, new Date())));
-      
+
       // Calculate and send magnetic declination
       var declination = Declination.getMagneticDeclination(activeObserver);
       //Declination.sendMagneticDeclination(declination);
