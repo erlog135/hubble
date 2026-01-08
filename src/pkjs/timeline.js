@@ -45,6 +45,7 @@ function timelineRequest(pin, type, topics, apiKey, callback) {
  * @param callback The callback to receive the responseText after the request has completed.
  */
 function insertUserPin(pin, callback) {
+  console.log("about to insert pin with id: " + pin.id);
   timelineRequest(pin, 'PUT', null, null, callback);
 }
 

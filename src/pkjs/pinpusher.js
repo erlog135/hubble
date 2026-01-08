@@ -1,31 +1,6 @@
 var timeline = require('./timeline');
 var astronomyEvents = require('./astronomy/events');
 
-/**
- * Delete all astronomy pins from the timeline
- * @param {function} callback - Called when all deletions are complete
- */
-function deleteAllAstronomyPins(callback) {
-  var pinIds = getAllPossiblePinIds();
-  var completed = 0;
-  var total = pinIds.length;
-
-  if (total === 0) {
-    callback();
-    return;
-  }
-
-  pinIds.forEach(function(pinId) {
-    var pin = { id: pinId };
-    timeline.deleteUserPin(pin, function(responseText) {
-      console.log('Deleted pin ' + pinId + ': ' + responseText);
-      completed++;
-      if (completed >= total) {
-        callback();
-      }
-    });
-  });
-}
 
 /**
  * Get all possible pin IDs that could exist
@@ -219,6 +194,41 @@ function isDateInTimelineRange(date) {
 }
 
 /**
+ * Checks if a date is within the visible timeline window:
+ *   - No more than 2 days in the past
+ *   - No more than 2 days in the future
+ * @param {Date} date - The date to check
+ * @returns {boolean} True if date is within the visible timeline window
+ */
+function isDateVisibleInTimeline(date) {
+  var now = new Date();
+  var twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+  var twoDaysLater = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+  return date >= twoDaysAgo && date <= twoDaysLater;
+}
+
+/**
+ * Calculate the sequence index (-2 to 2) for a date relative to today
+ * @param {Date} eventDate - The event date
+ * @returns {number} Sequence index (-2, -1, 0, 1, 2) or null if outside range
+ */
+function getSequenceIndexForDate(eventDate) {
+  var now = new Date();
+  var eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Calculate difference in days
+  var diffTime = eventDay.getTime() - today.getTime();
+  var diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  // Return sequence index if within -2 to 2 range
+  if (diffDays >= -2 && diffDays <= 2) {
+    return diffDays;
+  }
+  return null; // Outside visible range
+}
+
+/**
  * Generate a hash string from clay settings for cache comparison
  * @param {Object} settings - Clay settings object
  * @returns {string} Hash string representing the settings
@@ -284,25 +294,23 @@ function updatePinPushCache(settings) {
 function pushAstronomyEvents(observer, date, settings) {
   console.log('pushAstronomyEvents called with settings:', JSON.stringify(settings));
 
-  // Delete all existing astronomy pins first (temporary)
-  deleteAllAstronomyPins(function() {
-    console.log('All pins deleted, checking cache...');
-
-    // Check cache first - skip if settings haven't changed and < 30min ago
-    if (shouldSkipPinPush(settings)) {
-      return;
-    }
+  // Check cache first - skip if settings haven't changed and < 30min ago
+  if (shouldSkipPinPush(settings)) {
+    return;
+  }
 
   var referenceDate = date || new Date();
   var allEvents = astronomyEvents.getAllEvents(observer, referenceDate, settings);
 
   // Process rise/set events (sequence: -2, -1, 0, 1, 2)
+  var processedRiseSetIds = {};
   for (var i = 0; i < allEvents.riseSetEvents.length; i++) {
     var event = allEvents.riseSetEvents[i];
-    if (event.time && isDateInTimelineRange(event.time)) {
-      var sequenceIndex = i - 2; // Convert array index to sequence number (-2, -1, 0, 1, 2)
-      var styleKey = getRiseSetStyleKey(event);
-      var style = EVENT_STYLES[styleKey];
+    if (event.time && isDateVisibleInTimeline(event.time)) {
+      var sequenceIndex = getSequenceIndexForDate(event.time);
+      if (sequenceIndex >= -2 && sequenceIndex <= 2) {
+        var styleKey = getRiseSetStyleKey(event);
+        var style = EVENT_STYLES[styleKey];
 
       var title;
       if (event.body === 'Sun' && event.type === 'rise') {
@@ -320,6 +328,12 @@ function pushAstronomyEvents(observer, date, settings) {
 
 
       var pinId = generateEventPinId(event, 'riseset', sequenceIndex);
+
+      // Skip if we've already processed this pin ID
+      if (processedRiseSetIds[pinId]) {
+        continue;
+      }
+      processedRiseSetIds[pinId] = true;
 
       var pin = {
         id: pinId,
@@ -343,38 +357,48 @@ function pushAstronomyEvents(observer, date, settings) {
       timeline.insertUserPin(pin, function(responseText) {
         console.log('Pushed ' + title + ' pin: ' + responseText);
       });
+      }
     }
   }
 
   // Process twilight events (sequence: -2, -1, 0, 1, 2)
+  var processedTwilightIds = {};
   for (var i = 0; i < allEvents.twilightEvents.length; i++) {
     var event = allEvents.twilightEvents[i];
-    if (event.time && isDateInTimelineRange(event.time)) {
-      var sequenceIndex = i - 2; // Convert array index to sequence number (-2, -1, 0, 1, 2)
-      var styleKey = event.type + capitalizeFirst(event.subtype);
-      var style = EVENT_STYLES[styleKey];
+    if (event.time && isDateVisibleInTimeline(event.time)) {
+      var sequenceIndex = getSequenceIndexForDate(event.time);
+      if (sequenceIndex >= -2 && sequenceIndex <= 2) {
+        var styleKey = event.subtype + capitalizeFirst(event.type);
+        var style = EVENT_STYLES[styleKey];
 
-      var title = capitalizeFirst(event.subtype) + ' ' + event.type;
+        var title = capitalizeFirst(event.subtype) + ' ' + event.type;
 
-      var pinId = generateEventPinId(event, 'twilight', sequenceIndex);
+        var pinId = generateEventPinId(event, 'twilight', sequenceIndex);
 
-      var pin = {
-        id: pinId,
-        time: event.time.toISOString(),
-        layout: {
-          type: "genericPin",
-          primaryColor: style.foregroundColor,
-          secondaryColor: style.foregroundColor,
-          backgroundColor: style.backgroundColor,
-          title: title,
-          tinyIcon: "system://images/" + style.tinyIcon,
-          lastUpdated: new Date().toISOString()
+        // Skip if we've already processed this pin ID
+        if (processedTwilightIds[pinId]) {
+          continue;
         }
-      };
+        processedTwilightIds[pinId] = true;
 
-      timeline.insertUserPin(pin, function(responseText) {
-        console.log('Pushed ' + title + ' pin: ' + responseText);
-      });
+        var pin = {
+          id: pinId,
+          time: event.time.toISOString(),
+          layout: {
+            type: "genericPin",
+            primaryColor: style.foregroundColor,
+            secondaryColor: style.foregroundColor,
+            backgroundColor: style.backgroundColor,
+            title: title,
+            tinyIcon: "system://images/" + style.tinyIcon,
+            lastUpdated: new Date().toISOString()
+          }
+        };
+
+        timeline.insertUserPin(pin, function(responseText) {
+          console.log('Pushed ' + title + ' pin: ' + responseText);
+        });
+      }
     }
   }
 
@@ -504,7 +528,6 @@ function pushAstronomyEvents(observer, date, settings) {
 
     // Update cache after successful pin pushing
     updatePinPushCache(settings);
-  });
 }
 
 /**
@@ -616,6 +639,5 @@ function pushTestPin() {
 
 module.exports = {
   pushTestPin: pushTestPin,
-  pushAstronomyEvents: pushAstronomyEvents,
-  deleteAllAstronomyPins: deleteAllAstronomyPins
+  pushAstronomyEvents: pushAstronomyEvents
 };

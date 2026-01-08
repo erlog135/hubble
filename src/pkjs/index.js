@@ -25,7 +25,7 @@ Pebble.addEventListener('ready', function() {
   }
   console.log('Current clay settings:', JSON.stringify(claySettings));
 
-  PinPusher.pushTestPin();
+  //PinPusher.pushTestPin();
 
   Observer.initObserver().then(function(observer) {
     activeObserver = observer;
@@ -40,7 +40,7 @@ Pebble.addEventListener('ready', function() {
      //console.log('All events: ' + JSON.stringify(Events.getAllEvents(activeObserver, new Date())));
 
       // Push astronomy events to timeline
-      //PinPusher.pushAstronomyEvents(activeObserver, new Date(), claySettings);
+      PinPusher.pushAstronomyEvents(activeObserver, new Date(), claySettings);
       
 
       // Calculate and send magnetic declination
