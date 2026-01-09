@@ -1,5 +1,6 @@
 #include "home.h"
 #include "favorites.h"
+#include "events.h"
 #include "./catalog/planets.h"
 #include "./body/details.h"
 #include "../style.h"
@@ -8,7 +9,7 @@ static Window *s_window;
 static SimpleMenuLayer *s_menu_layer;
 static SimpleMenuSection s_menu_sections[2];
 static SimpleMenuItem s_main_items[2];
-static SimpleMenuItem s_catalog_items[5];
+static SimpleMenuItem s_catalog_items[5]; 
 
 static void prv_main_menu_select_callback(int index, void *context) {
 
@@ -16,9 +17,8 @@ static void prv_main_menu_select_callback(int index, void *context) {
     case 0:  // Favorites
       favorites_show();
       break;
-    case 1:  // Upcoming
-      APP_LOG(APP_LOG_LEVEL_INFO, "Home menu selected: %s", s_main_items[index].title);
-      vibes_short_pulse();
+    case 1:  // Refresh Events
+      events_show();
       break;
     default:
       APP_LOG(APP_LOG_LEVEL_INFO, "Home menu selected: %s", s_main_items[index].title);
@@ -59,7 +59,7 @@ static void prv_window_load(Window *window) {
       .callback = prv_main_menu_select_callback,
   };
   s_main_items[1] = (SimpleMenuItem){
-      .title = "Upcoming",
+      .title = "Refresh Events",
       .callback = prv_main_menu_select_callback,
   };
 

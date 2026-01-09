@@ -296,8 +296,10 @@ function pushAstronomyEvents(observer, date, settings) {
 
   // Check cache first - skip if settings haven't changed and < 30min ago
   if (shouldSkipPinPush(settings)) {
-    return;
+    return 0;
   }
+
+  var pinCount = 0;
 
   var referenceDate = date || new Date();
   var allEvents = astronomyEvents.getAllEvents(observer, referenceDate, settings);
@@ -335,6 +337,8 @@ function pushAstronomyEvents(observer, date, settings) {
       }
       processedRiseSetIds[pinId] = true;
 
+      pinCount++;
+
       var pin = {
         id: pinId,
         time: event.time.toISOString(),
@@ -345,8 +349,9 @@ function pushAstronomyEvents(observer, date, settings) {
           backgroundColor: style.backgroundColor,
           title: title,
           tinyIcon: "system://images/" + style.tinyIcon,
-          lastUpdated: new Date().toISOString()
-        }
+          lastUpdated: generateTimestamp()
+        },
+        actions: generatePinActions(event, 'riseset')
       };
 
       // Add moon phase info to subtitle if available
@@ -381,6 +386,8 @@ function pushAstronomyEvents(observer, date, settings) {
         }
         processedTwilightIds[pinId] = true;
 
+        pinCount++;
+
         var pin = {
           id: pinId,
           time: event.time.toISOString(),
@@ -391,8 +398,9 @@ function pushAstronomyEvents(observer, date, settings) {
             backgroundColor: style.backgroundColor,
             title: title,
             tinyIcon: "system://images/" + style.tinyIcon,
-            lastUpdated: new Date().toISOString()
-          }
+            lastUpdated: generateTimestamp()
+          },
+          actions: generatePinActions(event, 'twilight')
         };
 
         timeline.insertUserPin(pin, function(responseText) {
@@ -414,6 +422,8 @@ function pushAstronomyEvents(observer, date, settings) {
 
       var pinId = generateEventPinId(event, 'seasonal');
 
+      pinCount++;
+
       var pin = {
         id: pinId,
         time: event.date.toISOString(),
@@ -425,8 +435,9 @@ function pushAstronomyEvents(observer, date, settings) {
           title: title,
           subtitle: subtitle,
           tinyIcon: "system://images/" + style.tinyIcon,
-          lastUpdated: new Date().toISOString()
-        }
+          lastUpdated: generateTimestamp()
+        },
+        actions: generatePinActions(event, 'seasonal')
       };
 
       timeline.insertUserPin(pin, function(responseText) {
@@ -445,6 +456,8 @@ function pushAstronomyEvents(observer, date, settings) {
 
       var pinId = generateEventPinId(event, 'transit');
 
+      pinCount++;
+
       var pin = {
         id: pinId,
         time: event.start.toISOString(),
@@ -456,8 +469,9 @@ function pushAstronomyEvents(observer, date, settings) {
           title: title,
           subtitle: subtitle,
           tinyIcon: "system://images/" + style.tinyIcon,
-          lastUpdated: new Date().toISOString()
-        }
+          lastUpdated: generateTimestamp()
+        },
+        actions: generatePinActions(event, 'transit')
       };
 
       timeline.insertUserPin(pin, function(responseText) {
@@ -475,6 +489,8 @@ function pushAstronomyEvents(observer, date, settings) {
 
       var pinId = generateEventPinId(event, 'eclipse');
 
+      pinCount++;
+
       var pin = {
         id: pinId,
         time: event.peak.toISOString(),
@@ -485,8 +501,9 @@ function pushAstronomyEvents(observer, date, settings) {
           backgroundColor: style.backgroundColor,
           title: title,
           tinyIcon: "system://images/" + style.tinyIcon,
-          lastUpdated: new Date().toISOString()
-        }
+          lastUpdated: generateTimestamp()
+        },
+        actions: generatePinActions(event, 'eclipse')
       };
 
       timeline.insertUserPin(pin, function(responseText) {
@@ -505,6 +522,8 @@ function pushAstronomyEvents(observer, date, settings) {
 
       var pinId = generateEventPinId(event, 'apsis');
 
+      pinCount++;
+
       var pin = {
         id: pinId,
         time: event.time.toISOString(),
@@ -516,8 +535,9 @@ function pushAstronomyEvents(observer, date, settings) {
           title: title,
           subtitle: subtitle,
           tinyIcon: "system://images/" + style.tinyIcon,
-          lastUpdated: new Date().toISOString()
-        }
+          lastUpdated: generateTimestamp()
+        },
+        actions: generatePinActions(event, 'apsis')
       };
 
       timeline.insertUserPin(pin, function(responseText) {
@@ -528,6 +548,9 @@ function pushAstronomyEvents(observer, date, settings) {
 
     // Update cache after successful pin pushing
     updatePinPushCache(settings);
+
+    console.log('Total pins pushed: ' + pinCount);
+    return pinCount;
 }
 
 /**
@@ -603,10 +626,103 @@ function formatTime(date) {
 }
 
 /**
+ * Get the body ID for timeline pin actions
+ * @param {Object} event - The event object
+ * @param {string} category - The event category
+ * @returns {number} Body ID for the event
+ */
+function getBodyId(event, category) {
+  var body;
+  if (category === 'riseset' || category === 'transit') {
+    body = event.body;
+  } else if (category === 'twilight' || category === 'seasonal') {
+    body = 'Sun';
+  } else if (category === 'eclipse') {
+    body = event.type === 'solar' ? 'Sun' : 'Moon';
+  } else if (category === 'apsis') {
+    body = 'Moon';
+  }
+
+  // Map body names to IDs (must match BODY_NAMES in msgproc.js)
+  var bodyIds = {
+    'Moon': 0,
+    'Mercury': 1,
+    'Venus': 2,
+    'Mars': 3,
+    'Jupiter': 4,
+    'Saturn': 5,
+    'Uranus': 6,
+    'Neptune': 7,
+    'Pluto': 8,
+    'Sun': 9
+  };
+
+  return bodyIds[body] || 0;
+}
+
+/**
+ * Generate actions array for a timeline pin
+ * @param {Object} event - The event object
+ * @param {string} category - The event category
+ * @returns {Array} Array of action objects
+ */
+function generatePinActions(event, category) {
+  var bodyId = getBodyId(event, category);
+  var bodyName = getBodyName(event, category);
+
+  return [
+    {
+      "title": bodyName + " Details",
+      "type": "openWatchApp",
+      "launchCode": 200 + bodyId
+    },
+    {
+      "title": "Open Hubble",
+      "type": "openWatchApp",
+      "launchCode": 100
+    },
+    {
+      "title": "Refresh events",
+      "type": "openWatchApp",
+      "launchCode": 101
+    }
+  ];
+}
+
+/**
+ * Get the display name for a body
+ * @param {Object} event - The event object
+ * @param {string} category - The event category
+ * @returns {string} Display name for the body
+ */
+function getBodyName(event, category) {
+  var body;
+  if (category === 'riseset' || category === 'transit') {
+    body = event.body;
+  } else if (category === 'twilight' || category === 'seasonal') {
+    body = 'Sun';
+  } else if (category === 'eclipse') {
+    body = event.type === 'solar' ? 'Sun' : 'Moon';
+  } else if (category === 'apsis') {
+    body = 'Moon';
+  }
+
+  return body || 'Unknown';
+}
+
+/**
  * Capitalize the first letter of a string
  */
 function capitalizeFirst(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Generate a properly formatted timestamp for Pebble timeline pins
+ * Removes milliseconds to avoid display issues
+ */
+function generateTimestamp() {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
 // Push a pin when the app starts
@@ -625,19 +741,38 @@ function pushTestPin() {
         "backgroundColor": "#000000",
         "title": "Test Pin",
         "subtitle": "For Testing",
-        "body": "Here is a test pin with random numbers: " + Math.random().toString(),
-        "tinyIcon": "system://images/NOTIFICATION_FLAG",
-        "lastUpdated": new Date().toISOString()
+      "body": "Here is a test pin with random numbers: " + Math.random().toString(),
+      "tinyIcon": "system://images/NOTIFICATION_FLAG",
+      "lastUpdated": Date.now()
+    },
+    "actions": [
+      {
+        "title": "Open App",
+        "type": "openWatchApp",
+        "launchCode": 10
       }
+    ]
     };
   
+    console.log("ISO: " + date.toISOString());
+    console.log("timestamp: " + generateTimestamp());
+
     // Push the pin
     timeline.insertUserPin(pin, function(responseText) {
       console.log('Test pin pushed: ' + responseText);
     });
   }
 
+function deleteTestPin() {
+  timeline.deleteUserPin({
+    "id": "00-00-test"
+  }, function(responseText) {
+    console.log('Test pin deleted: ' + responseText);
+  });
+}
+
 module.exports = {
   pushTestPin: pushTestPin,
-  pushAstronomyEvents: pushAstronomyEvents
+  deleteTestPin: deleteTestPin,
+  pushAstronomyEvents: pushAstronomyEvents,
 };

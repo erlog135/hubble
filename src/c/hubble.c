@@ -7,6 +7,7 @@ static void prv_init(void) {
   settings_load();
   APP_LOG(APP_LOG_LEVEL_INFO, "Settings: %d", settings.favorites);
   bodymsg_init();
+  bodymsg_register_callbacks();  // Register body message callbacks by default
   home_init();
   home_show();
 }

@@ -184,37 +184,45 @@ function sendBodyPackage(bodyId, observer, date) {
   );
 }
 
-function registerBodyRequestHandler(observerProvider) {
-  Pebble.addEventListener('appmessage', function(e) {
-    var payload = e && e.payload ? e.payload : {};
-    console.log('Received payload: ' + JSON.stringify(payload));
+function createBodyRequestHandler(observerProvider) {
+  return function(payload) {
+    // Check if this is a body request first
+    if (!payload.hasOwnProperty("REQUEST_BODY")) {
+      return false; // Not a body request
+    }
+
+    console.log('Processing body request from payload: ' + JSON.stringify(payload));
 
     //this is okay in emulator but not on device
     // var bodyId = payload[Keys.REQUEST_BODY];
 
-    var bodyId = null;
+    var bodyId = payload["REQUEST_BODY"];
 
-    if (payload.hasOwnProperty("REQUEST_BODY")) {
-      bodyId = payload["REQUEST_BODY"];
-    }
-    
     console.log('Received body request for body ' + bodyId);
     if (bodyId === undefined || bodyId === null) {
-      return;
+      return false; // Not handled by this handler
     }
 
     var observer = (typeof observerProvider === 'function') ? observerProvider() : observerProvider;
     if (!observer) {
       console.log('Cannot process body request: missing observer');
-      return;
+      return false;
     }
 
     try {
       sendBodyPackage(bodyId, observer, new Date());
+      return true; // Handled by this handler
     } catch (err) {
       console.log('Error handling body request: ' + err.message);
+      return false;
     }
-  });
+  };
+}
+
+function registerBodyRequestHandler(observerProvider) {
+  // This function now just returns a handler function that can be called
+  // The actual appmessage listener is managed elsewhere
+  return createBodyRequestHandler(observerProvider);
 }
 
 module.exports = {

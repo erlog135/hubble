@@ -21,11 +21,8 @@ void bodymsg_init(void) {
     // Open AppMessage with appropriate buffer sizes
     app_message_open(INBOX_SIZE, OUTBOX_SIZE);
 
-    // Register callbacks
-    app_message_register_inbox_received(prv_inbox_received_callback);
-    app_message_register_inbox_dropped(prv_inbox_dropped_callback);
-    app_message_register_outbox_sent(prv_outbox_sent_callback);
-    app_message_register_outbox_failed(prv_outbox_failed_callback);
+    // Note: Callbacks are registered separately via bodymsg_register_callbacks()
+    // to allow dynamic switching between body messages and events
 
     s_app_message_ready = true;
     s_pending_body_id = -1;
@@ -38,6 +35,31 @@ void bodymsg_deinit(void) {
 
 bool bodymsg_is_ready(void) {
     return s_app_message_ready;
+}
+
+void bodymsg_register_callbacks(void) {
+    if (!s_app_message_ready) {
+        APP_LOG(APP_LOG_LEVEL_ERROR, "Cannot register callbacks: AppMessage not ready");
+        return;
+    }
+
+    // Register callbacks for body message handling
+    app_message_register_inbox_received(prv_inbox_received_callback);
+    app_message_register_inbox_dropped(prv_inbox_dropped_callback);
+    app_message_register_outbox_sent(prv_outbox_sent_callback);
+    app_message_register_outbox_failed(prv_outbox_failed_callback);
+
+    APP_LOG(APP_LOG_LEVEL_INFO, "Body message callbacks registered");
+}
+
+void bodymsg_deregister_callbacks(void) {
+    // Deregister callbacks to allow other handlers (like events) to take over
+    app_message_register_inbox_received(NULL);
+    app_message_register_inbox_dropped(NULL);
+    app_message_register_outbox_sent(NULL);
+    app_message_register_outbox_failed(NULL);
+
+    APP_LOG(APP_LOG_LEVEL_INFO, "Body message callbacks deregistered");
 }
 
 bool bodymsg_request_body(int body_id) {
