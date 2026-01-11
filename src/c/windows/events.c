@@ -77,7 +77,7 @@ static void prv_inbox_received_callback(DictionaryIterator *iter, void *context)
     if (event_count >= 0) {
       // Success - show count
       static char buffer[32];
-      snprintf(buffer, sizeof(buffer), "Events: %d", (int)event_count);
+      snprintf(buffer, sizeof(buffer), "Refreshed %d events", (int)event_count);
       text_layer_set_text(s_text_layer, buffer);
       APP_LOG(APP_LOG_LEVEL_INFO, "Events refresh completed: %d events", (int)event_count);
     } else {

@@ -186,22 +186,26 @@ function sendBodyPackage(bodyId, observer, date) {
 
 function createBodyRequestHandler(observerProvider) {
   return function(payload) {
-    // Check if this is a body request first
-    if (!payload.hasOwnProperty("REQUEST_BODY")) {
-      return false; // Not a body request
-    }
-
     console.log('Processing body request from payload: ' + JSON.stringify(payload));
 
     //this is okay in emulator but not on device
     // var bodyId = payload[Keys.REQUEST_BODY];
 
-    var bodyId = payload["REQUEST_BODY"];
+    var bodyId = null;
 
-    console.log('Received body request for body ' + bodyId);
+    // Try different ways to get the body ID (emulator vs device differences)
+    if (payload.hasOwnProperty("REQUEST_BODY")) {
+      bodyId = payload["REQUEST_BODY"];
+    } else if (payload.hasOwnProperty(Keys.REQUEST_BODY)) {
+      bodyId = payload[Keys.REQUEST_BODY];
+    }
+
+    // If neither key exists, this is not a body request
     if (bodyId === undefined || bodyId === null) {
       return false; // Not handled by this handler
     }
+
+    console.log('Received body request for body ' + bodyId);
 
     var observer = (typeof observerProvider === 'function') ? observerProvider() : observerProvider;
     if (!observer) {

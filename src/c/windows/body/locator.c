@@ -14,6 +14,7 @@ static Window *s_window;
 static Layer *s_crosshair_layer;
 static TextLayer *s_target_grid[GRID_ROWS][GRID_COLS];
 static TextLayer *s_current_grid[GRID_ROWS][GRID_COLS];
+static TextLayer *s_calibration_layer;
 static StatusBarLayer *s_status_layer;
 static ActionBarLayer *s_action_bar;
 static GBitmap *s_icon_light_on;
@@ -22,10 +23,13 @@ static GBitmap *s_icon_vibe_on;
 static GBitmap *s_icon_vibe_off;
 static bool s_light_enabled;
 static bool s_vibe_enabled;
+static bool s_is_calibrated;
 
 static TargetData s_target = {42, 245};
 static int16_t s_current_altitude_deg = 0;
 static int16_t s_current_azimuth_deg = 0;
+
+static void prv_update_labels(void);
 
 static int16_t prv_normalize_azimuth_delta(int16_t delta) {
   // Wrap into [-180, 180] for smallest rotation distance.
@@ -42,30 +46,51 @@ static void prv_on_altitude(int16_t altitude_deg) {
   locator_set_current_altitude(altitude_deg);
 }
 
+#if defined(PBL_COMPASS)
 static void prv_on_azimuth(int16_t azimuth_deg) {
   locator_set_current_azimuth(azimuth_deg);
 }
 
+static void prv_on_calibration(bool is_calibrated) {
+  s_is_calibrated = is_calibrated;
+
+  // Only update UI if layers are initialized
+  if (s_crosshair_layer && s_calibration_layer) {
+    prv_update_labels();
+    layer_set_hidden(s_crosshair_layer, !is_calibrated);
+    layer_set_hidden(text_layer_get_layer(s_calibration_layer), is_calibrated);
+  }
+}
+#endif
+
 static void prv_update_labels(void) {
-  if (!s_target_grid[1][0] || !s_target_grid[1][1] || !s_current_grid[1][0] ||
-      !s_current_grid[1][1]) {
+  if (!s_target_grid[1][0] || !s_current_grid[1][0] || !s_target_grid[1][1]) {
     return;
   }
 
   static char s_target_alt_text[8];
   static char s_target_az_text[8];
   static char s_current_alt_text[8];
-  static char s_current_az_text[8];
 
   snprintf(s_target_alt_text, sizeof(s_target_alt_text), "%d°", s_target.altitude_deg);
   snprintf(s_target_az_text, sizeof(s_target_az_text), "%d°", s_target.azimuth_deg);
   snprintf(s_current_alt_text, sizeof(s_current_alt_text), "%d°", s_current_altitude_deg);
-  snprintf(s_current_az_text, sizeof(s_current_az_text), "%d°", s_current_azimuth_deg);
 
   text_layer_set_text(s_target_grid[1][0], s_target_alt_text);
   text_layer_set_text(s_target_grid[1][1], s_target_az_text);
   text_layer_set_text(s_current_grid[1][0], s_current_alt_text);
-  text_layer_set_text(s_current_grid[1][1], s_current_az_text);
+
+#if defined(PBL_COMPASS)
+  if (s_current_grid[1][1]) {
+    if (s_is_calibrated) {
+      static char s_current_az_text[8];
+      snprintf(s_current_az_text, sizeof(s_current_az_text), "%d°", s_current_azimuth_deg);
+      text_layer_set_text(s_current_grid[1][1], s_current_az_text);
+    } else {
+      text_layer_set_text(s_current_grid[1][1], "");
+    }
+  }
+#endif
 }
 
 static void prv_update_action_icons(void) {
@@ -108,9 +133,19 @@ static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
+#if defined(PBL_COMPASS)
   // Concentric circles
   graphics_draw_circle(ctx, center, radius);
   graphics_draw_circle(ctx, center, radius / 2);
+#else
+  // Horizontal lines for watches without compass
+  // Longer lines at edges
+  graphics_draw_line(ctx, GPoint(bounds.origin.x, center.y - radius), GPoint(bounds.origin.x + bounds.size.w, center.y - radius));
+  graphics_draw_line(ctx, GPoint(bounds.origin.x, center.y + radius), GPoint(bounds.origin.x + bounds.size.w, center.y + radius));
+  // Shorter lines in middle
+  graphics_draw_line(ctx, GPoint(center.x - radius/2, center.y - radius/2), GPoint(center.x + radius/2, center.y - radius/2));
+  graphics_draw_line(ctx, GPoint(center.x - radius/2, center.y + radius/2), GPoint(center.x + radius/2, center.y + radius/2));
+#endif
 
   // Crosshair lines
   graphics_draw_line(ctx, GPoint(center.x - radius, center.y), GPoint(center.x + radius, center.y));
@@ -121,11 +156,17 @@ static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
 
   // Target indicator: offset from center by current vs. target deltas.
   const int16_t delta_alt = s_target.altitude_deg - s_current_altitude_deg;
+#if defined(PBL_COMPASS)
   const int16_t delta_az = prv_normalize_azimuth_delta(s_target.azimuth_deg - s_current_azimuth_deg);
+#endif
 
   // Map degrees to pixels using the crosshair radius; clamp to stay on the reticle.
   const int16_t max_span_deg = 90;  // map +/-90° to full radius
+#if defined(PBL_COMPASS)
   int16_t dx = (int16_t)((radius * delta_az) / max_span_deg);
+#else
+  int16_t dx = 0;
+#endif
   int16_t dy = (int16_t)((-radius * delta_alt) / max_span_deg);  // negative to move up for positive altitude
   if (dx > (int16_t)radius) dx = radius;
   if (dx < -(int16_t)radius) dx = -(int16_t)radius;
@@ -202,13 +243,28 @@ static void prv_window_load(Window *window) {
                   value_font, layout->foreground);
 
   const char *current_text[GRID_ROWS][GRID_COLS] = {
-      {"My Alt", "My Az"},
+      {"My Alt",
+#if defined(PBL_COMPASS)
+       "My Az"
+#else
+       ""
+#endif
+      },
       {"", ""},
   };
   const GRect current_grid_frame =
       GRect(content_bounds.origin.x, bottom_grid_y, content_bounds.size.w, grid_height);
   prv_create_grid(s_current_grid, window_layer, current_grid_frame, current_text, header_font,
                   value_font, layout->foreground);
+
+  // Calibration message layer (shown when compass needs calibration)
+  s_calibration_layer = text_layer_create(content_bounds);
+  text_layer_set_background_color(s_calibration_layer, GColorBlack);
+  text_layer_set_text_color(s_calibration_layer, GColorWhite);
+  text_layer_set_font(s_calibration_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text(s_calibration_layer, "Do a figure-8\nwith your watch\nto calibrate");
+  text_layer_set_text_alignment(s_calibration_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(s_calibration_layer));
 
   // Action bar on the right edge.
   s_light_enabled = false;
@@ -225,6 +281,11 @@ static void prv_window_load(Window *window) {
   prv_update_action_icons();
 
   prv_update_labels();
+
+#if defined(PBL_COMPASS)
+  // Apply current calibration state to UI after window is loaded
+  prv_on_calibration(s_is_calibrated);
+#endif
 }
 
 static void prv_window_unload(Window *window) {
@@ -267,6 +328,8 @@ static void prv_window_unload(Window *window) {
   }
   layer_destroy(s_crosshair_layer);
   s_crosshair_layer = NULL;
+  text_layer_destroy(s_calibration_layer);
+  s_calibration_layer = NULL;
   status_bar_layer_destroy(s_status_layer);
   s_status_layer = NULL;
 }
@@ -287,8 +350,11 @@ void locator_init(void) {
   altitude_provider_init();
   altitude_provider_set_handler(prv_on_altitude);
 
+#if defined(PBL_COMPASS)
   azimuth_provider_init();
   azimuth_provider_set_handler(prv_on_azimuth);
+  azimuth_provider_set_calibration_handler(prv_on_calibration);
+#endif
 }
 
 void locator_deinit(void) {
@@ -296,13 +362,16 @@ void locator_deinit(void) {
     return;
   }
 
+#if defined(PBL_COMPASS)
   azimuth_provider_deinit();
+#endif
   altitude_provider_deinit();
 
   window_stack_remove(s_window, false);
   window_destroy(s_window);
   s_window = NULL;
   s_crosshair_layer = NULL;
+  s_calibration_layer = NULL;
   memset(s_target_grid, 0, sizeof(s_target_grid));
   memset(s_current_grid, 0, sizeof(s_current_grid));
   s_status_layer = NULL;
@@ -323,12 +392,14 @@ void locator_set_current_altitude(int16_t altitude_deg) {
 
 int16_t locator_get_current_altitude(void) { return s_current_altitude_deg; }
 
+#if defined(PBL_COMPASS)
 void locator_set_current_azimuth(int16_t azimuth_deg) {
   s_current_azimuth_deg = azimuth_deg;
   prv_update_labels();
 }
 
 int16_t locator_get_current_azimuth(void) { return s_current_azimuth_deg; }
+#endif
 
 void locator_show(void) {
   if (!s_window) {

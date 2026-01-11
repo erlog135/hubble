@@ -10,12 +10,19 @@ var Keys = require('message_keys');
 var clay = new Clay(clayConfig);
 
 var activeObserver = null;
-var bodyRequestHandler = null;
 
 // Handle messages from the watch - single listener for all message types
 Pebble.addEventListener('appmessage', function(e) {
   var payload = e && e.payload ? e.payload : {};
   console.log('Received payload: ' + JSON.stringify(payload));
+
+  // Try body request handler first (if observer is available)
+  if (activeObserver) {
+    var handled = MsgProc.registerBodyRequestHandler(function() { return activeObserver; })(payload);
+    if (handled) {
+      return; // Body request was handled
+    }
+  }
 
   // Handle events refresh
   if (payload.hasOwnProperty("REQUEST_EVENTS_REFRESH")) {
@@ -107,9 +114,8 @@ Pebble.addEventListener('ready', function() {
     console.log('Observer ready (lat=' + observer.latitude +
       ', lon=' + observer.longitude + ', h=' + observer.height + ')');
 
-      // Register handler for body data requests from watch
-      bodyRequestHandler = MsgProc.registerBodyRequestHandler(function() { return activeObserver; });
-      console.log('Body request handler registered');
+      // Body request handler is now registered dynamically in the appmessage listener
+      console.log('Body request handler ready');
 
       // Calculate and send magnetic declination
       var declination = Declination.getMagneticDeclination(activeObserver);

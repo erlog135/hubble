@@ -2,9 +2,20 @@
 
 static int16_t s_azimuth_deg = 0;
 static AzimuthUpdateHandler s_handler = NULL;
+static CalibrationUpdateHandler s_calibration_handler = NULL;
+static bool s_is_calibrated = false;
 
 static void prv_handle_heading(CompassHeadingData data) {
-  if (data.compass_status == CompassStatusDataInvalid) {
+  bool was_calibrated = s_is_calibrated;
+  s_is_calibrated = (data.compass_status != CompassStatusDataInvalid &&
+                     data.compass_status != CompassStatusUnavailable);
+
+  // Notify if calibration status changed
+  if (s_calibration_handler && was_calibrated != s_is_calibrated) {
+    s_calibration_handler(s_is_calibrated);
+  }
+
+  if (!s_is_calibrated) {
     return;
   }
 
@@ -34,12 +45,20 @@ void azimuth_provider_init(void) {
 void azimuth_provider_deinit(void) {
   compass_service_unsubscribe();
   s_handler = NULL;
+  s_calibration_handler = NULL;
 }
 
 void azimuth_provider_set_handler(AzimuthUpdateHandler handler) {
   s_handler = handler;
-  if (handler) {
+  if (handler && s_is_calibrated) {
     handler(s_azimuth_deg);
+  }
+}
+
+void azimuth_provider_set_calibration_handler(CalibrationUpdateHandler handler) {
+  s_calibration_handler = handler;
+  if (handler) {
+    handler(s_is_calibrated);
   }
 }
 
@@ -47,3 +66,6 @@ int16_t azimuth_provider_get_azimuth_deg(void) {
   return s_azimuth_deg;
 }
 
+bool azimuth_provider_is_calibrated(void) {
+  return s_is_calibrated;
+}

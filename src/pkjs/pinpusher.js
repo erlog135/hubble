@@ -743,7 +743,7 @@ function pushTestPin() {
         "subtitle": "For Testing",
       "body": "Here is a test pin with random numbers: " + Math.random().toString(),
       "tinyIcon": "system://images/NOTIFICATION_FLAG",
-      "lastUpdated": Date.now()
+      "lastUpdated": "2026-01-09T00:00:00+00:00"
     },
     "actions": [
       {
