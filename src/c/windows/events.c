@@ -114,6 +114,12 @@ void events_init(void) {
     return;
   }
 
+  // Initialize bodymsg if not already initialized (for message routing)
+  if (!bodymsg_is_ready()) {
+    bodymsg_init();
+    bodymsg_register_callbacks();
+  }
+
   // Deregister body message callbacks to allow events to handle messages
   bodymsg_deregister_callbacks();
 

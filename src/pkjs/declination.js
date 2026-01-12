@@ -46,7 +46,7 @@ function sendMagneticDeclination(declination) {
   Pebble.sendAppMessage(
     (function() {
       var dict = {};
-      dict[Keys.MAGNETIC_DECLINATION] = declinationTimes10;
+      dict[Keys.DECLINATION] = declinationTimes10;
       return dict;
     })(),
     function() {

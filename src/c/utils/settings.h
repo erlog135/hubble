@@ -6,6 +6,7 @@
 
 typedef struct LocalSettings{
     uint32_t favorites;  // on/off for each of up to 32 favorites
+    int8_t magnetic_declination; // magnetic declination in degrees
 } LocalSettings;
 
 static LocalSettings settings;

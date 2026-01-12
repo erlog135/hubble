@@ -414,6 +414,10 @@ void details_init(void) {
     return;
   }
 
+  // Initialize bodymsg system for body data requests and declination handling
+  bodymsg_init();
+  bodymsg_register_callbacks();
+  
   s_content = s_default_content;
   s_is_loading = false;
   s_window = window_create();
@@ -440,6 +444,10 @@ void details_deinit(void) {
   s_pdc_image = NULL;
   s_bitmap_image = NULL;
   s_status_layer = NULL;
+  
+  // Deinitialize bodymsg system
+  bodymsg_deregister_callbacks();
+  bodymsg_deinit();
 }
 
 void details_show(const DetailsContent *content) {
@@ -452,6 +460,11 @@ void details_show(const DetailsContent *content) {
   if (content) {
     s_content = *content;
     s_is_loading = false;
+    
+    // Deregister bodymsg callbacks after successfully receiving body data
+    // This allows other windows (like events) to take control of message handling
+    bodymsg_deregister_callbacks();
+    APP_LOG(APP_LOG_LEVEL_INFO, "Details received body data, deregistered bodymsg callbacks");
   }
 
   // Check if window is already visible
@@ -469,6 +482,12 @@ void details_show(const DetailsContent *content) {
 void details_show_body(int body_id) {
   if (!s_window) {
     details_init();
+  }
+
+  // Ensure callbacks are registered before requesting body data
+  // (They may have been deregistered after a previous request)
+  if (bodymsg_is_ready()) {
+    bodymsg_register_callbacks();
   }
 
   // Request body data from the phone

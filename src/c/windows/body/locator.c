@@ -2,6 +2,8 @@
 #include "../../providers/altitude_provider.h"
 #include "../../providers/azimuth_provider.h"
 #include "../../style.h"
+#include "../../utils/settings.h"
+#include "../../utils/bodymsg.h"
 #include <pebble.h>
 #include <string.h>
 
@@ -24,12 +26,16 @@ static GBitmap *s_icon_vibe_off;
 static bool s_light_enabled;
 static bool s_vibe_enabled;
 static bool s_is_calibrated;
+static bool s_declination_requested = false;
 
 static TargetData s_target = {42, 245};
 static int16_t s_current_altitude_deg = 0;
 static int16_t s_current_azimuth_deg = 0;
 
 static void prv_update_labels(void);
+static void prv_request_declination(void);
+static void prv_on_declination_received(int8_t declination);
+static void prv_inbox_received_callback(DictionaryIterator *iter, void *context);
 
 static int16_t prv_normalize_azimuth_delta(int16_t delta) {
   // Wrap into [-180, 180] for smallest rotation distance.
@@ -40,6 +46,60 @@ static int16_t prv_normalize_azimuth_delta(int16_t delta) {
     delta += 360;
   }
   return delta;
+}
+
+static void prv_request_declination(void) {
+#if defined(PBL_COMPASS)
+  if (s_declination_requested) {
+    return;  // Already requested
+  }
+
+  DictionaryIterator *out_iter;
+  AppMessageResult result = app_message_outbox_begin(&out_iter);
+  
+  if (result != APP_MSG_OK) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to begin outbox for declination request: %d", (int)result);
+    return;
+  }
+
+  // Send REQUEST_DECLINATION message (value doesn't matter, just the key)
+  int dummy_value = 1;
+  dict_write_int(out_iter, MESSAGE_KEY_REQUEST_DECLINATION, &dummy_value, sizeof(int), true);
+  
+  result = app_message_outbox_send();
+  if (result == APP_MSG_OK) {
+    s_declination_requested = true;
+    APP_LOG(APP_LOG_LEVEL_INFO, "Requested magnetic declination");
+  } else {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to send declination request: %d", (int)result);
+  }
+#endif
+}
+
+static void prv_inbox_received_callback(DictionaryIterator *iter, void *context) {
+  // Check if this is a DECLINATION response
+  Tuple *declination_tuple = dict_find(iter, MESSAGE_KEY_DECLINATION);
+  if (declination_tuple) {
+    // Declination is sent as integer * 10 for one decimal place precision
+    int16_t declination_times_10 = declination_tuple->value->int16;
+    int8_t declination = (int8_t)(declination_times_10 / 10);
+    
+    prv_on_declination_received(declination);
+  }
+}
+
+static void prv_on_declination_received(int8_t declination) {
+  LocalSettings *settings = settings_get();
+  settings->magnetic_declination = declination;
+  settings_save();
+  
+  APP_LOG(APP_LOG_LEVEL_INFO, "Stored magnetic declination: %d degrees", declination);
+  prv_update_labels();
+  
+  // Trigger crosshair redraw to update target indicator position
+  if (s_crosshair_layer) {
+    layer_mark_dirty(s_crosshair_layer);
+  }
 }
 
 static void prv_on_altitude(int16_t altitude_deg) {
@@ -83,8 +143,19 @@ static void prv_update_labels(void) {
 #if defined(PBL_COMPASS)
   if (s_current_grid[1][1]) {
     if (s_is_calibrated) {
-      static char s_current_az_text[8];
-      snprintf(s_current_az_text, sizeof(s_current_az_text), "%d°", s_current_azimuth_deg);
+      LocalSettings *settings = settings_get();
+      int16_t corrected_azimuth = s_current_azimuth_deg + settings->magnetic_declination;
+      // Normalize to 0-359 range
+      while (corrected_azimuth < 0) corrected_azimuth += 360;
+      while (corrected_azimuth >= 360) corrected_azimuth -= 360;
+      
+      static char s_current_az_text[20];
+      if (settings->magnetic_declination != 0) {
+        snprintf(s_current_az_text, sizeof(s_current_az_text), "%d° (%+d)", 
+                 corrected_azimuth, settings->magnetic_declination);
+      } else {
+        snprintf(s_current_az_text, sizeof(s_current_az_text), "%d°", corrected_azimuth);
+      }
       text_layer_set_text(s_current_grid[1][1], s_current_az_text);
     } else {
       text_layer_set_text(s_current_grid[1][1], "");
@@ -157,7 +228,10 @@ static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
   // Target indicator: offset from center by current vs. target deltas.
   const int16_t delta_alt = s_target.altitude_deg - s_current_altitude_deg;
 #if defined(PBL_COMPASS)
-  const int16_t delta_az = prv_normalize_azimuth_delta(s_target.azimuth_deg - s_current_azimuth_deg);
+  // Apply magnetic declination correction to current azimuth
+  LocalSettings *settings = settings_get();
+  int16_t corrected_current_azimuth = s_current_azimuth_deg + settings->magnetic_declination;
+  const int16_t delta_az = prv_normalize_azimuth_delta(s_target.azimuth_deg - corrected_current_azimuth);
 #endif
 
   // Map degrees to pixels using the crosshair radius; clamp to stay on the reticle.
@@ -285,6 +359,12 @@ static void prv_window_load(Window *window) {
 #if defined(PBL_COMPASS)
   // Apply current calibration state to UI after window is loaded
   prv_on_calibration(s_is_calibrated);
+  
+  // Register inbox callback for declination response
+  app_message_register_inbox_received(prv_inbox_received_callback);
+  
+  // Request magnetic declination from JavaScript
+  prv_request_declination();
 #endif
 }
 
@@ -292,6 +372,11 @@ static void prv_window_unload(Window *window) {
   // Disable light when going back
   light_enable(false);
   s_light_enabled = false;
+  
+#if defined(PBL_COMPASS)
+  // Unregister inbox callback
+  app_message_register_inbox_received(NULL);
+#endif
 
   for (int row = 0; row < GRID_ROWS; ++row) {
     for (int col = 0; col < GRID_COLS; ++col) {
@@ -364,6 +449,7 @@ void locator_deinit(void) {
 
 #if defined(PBL_COMPASS)
   azimuth_provider_deinit();
+  s_declination_requested = false;
 #endif
   altitude_provider_deinit();
 

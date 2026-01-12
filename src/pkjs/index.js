@@ -24,6 +24,28 @@ Pebble.addEventListener('appmessage', function(e) {
     }
   }
 
+  // Handle declination request
+  if (payload.hasOwnProperty("REQUEST_DECLINATION")) {
+    console.log('Received REQUEST_DECLINATION');
+    
+    if (!activeObserver) {
+      console.log('No active observer, cannot calculate declination');
+      return;
+    }
+    
+    try {
+      var declination = Declination.getMagneticDeclination(activeObserver);
+      if (declination !== null) {
+        Declination.sendMagneticDeclination(declination);
+      } else {
+        console.log('Failed to calculate magnetic declination');
+      }
+    } catch (error) {
+      console.log('Error handling declination request:', error);
+    }
+    return;
+  }
+
   // Handle events refresh
   if (payload.hasOwnProperty("REQUEST_EVENTS_REFRESH")) {
     console.log('Received REQUEST_EVENTS_REFRESH');
