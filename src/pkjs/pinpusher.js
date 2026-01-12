@@ -46,6 +46,7 @@ function getAllPossiblePinIds() {
 // Cache for pin pushing to avoid unnecessary recalculations
 var lastPinPushTime = 0;
 var lastPinPushSettingsHash = null;
+var lastPinPushSettings = null; // Store actual settings object for comparison
 var PIN_PUSH_CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 // Preset pin IDs for different event types
@@ -251,9 +252,10 @@ function generateSettingsHash(settings) {
 }
 
 /**
- * Check if pin pushing should be skipped based on cache
+ * Check if pin pushing should be skipped based on cache and return change info
  * @param {Object} settings - Current clay settings
- * @returns {boolean} True if we should skip pin pushing
+ * @returns {Object} Object with skip flag and disabled patterns if applicable
+ *                   {shouldSkip: boolean, disabledPatterns: Array<string>}
  */
 function shouldSkipPinPush(settings) {
   var now = new Date().getTime();
@@ -268,11 +270,21 @@ function shouldSkipPinPush(settings) {
   if (currentSettingsHash === lastPinPushSettingsHash &&
       (now - lastPinPushTime) < PIN_PUSH_CACHE_DURATION_MS) {
     console.log('Skipping pin push - cache still valid (settings unchanged, < 30min old)');
-    return true;
+    return { shouldSkip: true, disabledPatterns: [] };
+  }
+
+  // Settings have changed or cache expired - check what was disabled
+  var disabledPatterns = [];
+  if (lastPinPushSettings) {
+    disabledPatterns = getDisabledPinIdPatterns(lastPinPushSettings, settings);
   }
 
   console.log('Proceeding with pin push - cache expired or settings changed');
-  return false;
+  if (disabledPatterns.length > 0) {
+    console.log('Disabled patterns found:', disabledPatterns);
+  }
+
+  return { shouldSkip: false, disabledPatterns: disabledPatterns };
 }
 
 /**
@@ -282,7 +294,119 @@ function shouldSkipPinPush(settings) {
 function updatePinPushCache(settings) {
   lastPinPushTime = new Date().getTime();
   lastPinPushSettingsHash = generateSettingsHash(settings);
+  lastPinPushSettings = JSON.parse(JSON.stringify(settings)); // Deep copy
   console.log('Updated pin push cache - new hash:', lastPinPushSettingsHash);
+}
+
+/**
+ * Compare old and new settings to identify which features have been disabled
+ * @param {Object} oldSettings - Previous clay settings
+ * @param {Object} newSettings - Current clay settings
+ * @returns {Array<string>} Array of pin ID patterns that should be deleted
+ */
+function getDisabledPinIdPatterns(oldSettings, newSettings) {
+  var disabledPatterns = [];
+
+  // Helper to check if a setting was disabled
+  function wasDisabled(settingKey) {
+    var oldValue = oldSettings ? oldSettings[settingKey] : true; // Default to true if no old settings
+    var newValue = newSettings ? newSettings[settingKey] : true;
+    return oldValue === true && newValue === false;
+  }
+
+  // Helper to check if a planet setting was disabled
+  function wasPlanetDisabled(index) {
+    var oldPlanets = oldSettings && oldSettings.CFG_PLANET_EVENTS ? oldSettings.CFG_PLANET_EVENTS : [false, false, false, false, false, false, false, false];
+    var newPlanets = newSettings && newSettings.CFG_PLANET_EVENTS ? newSettings.CFG_PLANET_EVENTS : [false, false, false, false, false, false, false, false];
+    return oldPlanets[index] === true && newPlanets[index] === false;
+  }
+
+  var planetNames = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
+
+  // Check each setting and map to pin ID patterns
+  if (wasDisabled('CFG_SUN_RISE_SET')) {
+    disabledPatterns.push('sun-rise', 'sun-set');
+  }
+  if (wasDisabled('CFG_SUN_CIVIL_DAWN_DUSK')) {
+    disabledPatterns.push('civil-dawn', 'civil-dusk');
+  }
+  if (wasDisabled('CFG_SUN_NAUTICAL_DAWN_DUSK')) {
+    disabledPatterns.push('nautical-dawn', 'nautical-dusk');
+  }
+  if (wasDisabled('CFG_SUN_ASTRONOMICAL_DAWN_DUSK')) {
+    disabledPatterns.push('astronomical-dawn', 'astronomical-dusk');
+  }
+  if (wasDisabled('CFG_SUN_SOLSTICES')) {
+    disabledPatterns.push('solstice');
+  }
+  if (wasDisabled('CFG_SUN_EQUINOXES')) {
+    disabledPatterns.push('equinox');
+  }
+  if (wasDisabled('CFG_SUN_ECLIPSES')) {
+    disabledPatterns.push('eclipse');
+  }
+  if (wasDisabled('CFG_SUN_SOLAR_TRANSITS')) {
+    disabledPatterns.push('planetary-transit');
+  }
+  if (wasDisabled('CFG_MOON_RISE_SET')) {
+    disabledPatterns.push('moon-rise', 'moon-set');
+  }
+  if (wasDisabled('CFG_MOON_APOGEE_PERIGEE')) {
+    disabledPatterns.push('moon-apsis');
+  }
+
+  // Check planet settings
+  for (var i = 0; i < planetNames.length; i++) {
+    if (wasPlanetDisabled(i)) {
+      disabledPatterns.push(planetNames[i] + '-rise', planetNames[i] + '-set');
+    }
+  }
+
+  return disabledPatterns;
+}
+
+/**
+ * Delete pins that match the given ID patterns
+ * @param {Array<string>} patterns - Array of pin ID patterns to delete
+ * @returns {number} Number of deletion operations initiated
+ */
+function deletePinsByPatterns(patterns) {
+  if (!patterns || patterns.length === 0) {
+    return 0;
+  }
+
+  console.log('Deleting pins for disabled patterns:', patterns);
+
+  var deletions = 0;
+
+  // Get all possible pin IDs and filter by patterns
+  var allPinIds = getAllPossiblePinIds();
+  var pinsToDelete = [];
+
+  patterns.forEach(function(pattern) {
+    allPinIds.forEach(function(pinId) {
+      if (pinId.indexOf(pattern) === 0) {
+        pinsToDelete.push(pinId);
+      }
+    });
+  });
+
+  // Remove duplicates
+  pinsToDelete = pinsToDelete.filter(function(item, pos) {
+    return pinsToDelete.indexOf(item) === pos;
+  });
+
+  console.log('Found', pinsToDelete.length, 'pins to delete');
+
+  // Delete each pin
+  pinsToDelete.forEach(function(pinId) {
+    timeline.deleteUserPin({ id: pinId }, function(responseText) {
+      console.log('Deleted pin:', pinId, responseText);
+    });
+    deletions++;
+  });
+
+  return deletions;
 }
 
 /**
@@ -294,9 +418,16 @@ function updatePinPushCache(settings) {
 function pushAstronomyEvents(observer, date, settings) {
   console.log('pushAstronomyEvents called with settings:', JSON.stringify(settings));
 
-  // Check cache first - skip if settings haven't changed and < 30min ago
-  if (shouldSkipPinPush(settings)) {
+  // Check cache and get disabled patterns info
+  var cacheCheck = shouldSkipPinPush(settings);
+  if (cacheCheck.shouldSkip) {
     return 0;
+  }
+
+  // Delete pins for disabled features if any settings were disabled
+  if (cacheCheck.disabledPatterns.length > 0) {
+    var deletions = deletePinsByPatterns(cacheCheck.disabledPatterns);
+    console.log('Initiated deletion of', deletions, 'pins for disabled features');
   }
 
   var pinCount = 0;
