@@ -80,10 +80,9 @@ static void prv_inbox_received_callback(DictionaryIterator *iter, void *context)
   // Check if this is a DECLINATION response
   Tuple *declination_tuple = dict_find(iter, MESSAGE_KEY_DECLINATION);
   if (declination_tuple) {
-    // Declination is sent as integer * 10 for one decimal place precision
-    int16_t declination_times_10 = declination_tuple->value->int16;
-    int8_t declination = (int8_t)(declination_times_10 / 10);
-    
+    // Declination is sent as rounded integer degrees
+    int8_t declination = (int8_t)declination_tuple->value->int16;
+
     prv_on_declination_received(declination);
   }
 }
@@ -151,8 +150,7 @@ static void prv_update_labels(void) {
       
       static char s_current_az_text[20];
       if (settings->magnetic_declination != 0) {
-        snprintf(s_current_az_text, sizeof(s_current_az_text), "%d° (%+d)", 
-                 corrected_azimuth, settings->magnetic_declination);
+        snprintf(s_current_az_text, sizeof(s_current_az_text), "%d°😊", corrected_azimuth);
       } else {
         snprintf(s_current_az_text, sizeof(s_current_az_text), "%d°", corrected_azimuth);
       }

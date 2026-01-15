@@ -45,7 +45,6 @@ function getAllPossiblePinIds() {
 
 // Cache for pin pushing to avoid unnecessary recalculations
 var lastPinPushTime = 0;
-var lastPinPushSettingsHash = null;
 var lastPinPushSettings = null; // Store actual settings object for comparison
 var PIN_PUSH_CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -229,26 +228,45 @@ function getSequenceIndexForDate(eventDate) {
   return null; // Outside visible range
 }
 
+
 /**
- * Generate a hash string from clay settings for cache comparison
- * @param {Object} settings - Clay settings object
- * @returns {string} Hash string representing the settings
+ * Compare two settings objects for equality
+ * @param {Object} settings1 - First settings object
+ * @param {Object} settings2 - Second settings object
+ * @returns {boolean} True if settings are equal
  */
-function generateSettingsHash(settings) {
-  if (!settings) return '';
+function areSettingsEqual(settings1, settings2) {
+  if (!settings1 && !settings2) return true;
+  if (!settings1 || !settings2) return false;
 
-  // All clay settings are astronomy settings (start with CFG_), so use them all
-  // Create a sorted array of key-value pairs and stringify
-  var keys = Object.keys(settings).sort();
-  var hashParts = keys.map(function(key) {
-    var value = settings[key];
-    if (Array.isArray(value)) {
-      return key + ':' + value.join(',');
+  var keys1 = Object.keys(settings1).sort();
+  var keys2 = Object.keys(settings2).sort();
+
+  // Check if same number of keys
+  if (keys1.length !== keys2.length) return false;
+
+  // Check if all keys match
+  for (var i = 0; i < keys1.length; i++) {
+    if (keys1[i] !== keys2[i]) return false;
+  }
+
+  // Check if all values match
+  for (var j = 0; j < keys1.length; j++) {
+    var key = keys1[j];
+    var value1 = settings1[key];
+    var value2 = settings2[key];
+
+    if (Array.isArray(value1) && Array.isArray(value2)) {
+      if (value1.length !== value2.length) return false;
+      for (var k = 0; k < value1.length; k++) {
+        if (value1[k] !== value2[k]) return false;
+      }
+    } else if (value1 !== value2) {
+      return false;
     }
-    return key + ':' + String(value);
-  });
+  }
 
-  return hashParts.join('|');
+  return true;
 }
 
 /**
@@ -259,16 +277,14 @@ function generateSettingsHash(settings) {
  */
 function shouldSkipPinPush(settings) {
   var now = new Date().getTime();
-  var currentSettingsHash = generateSettingsHash(settings);
+  var settingsUnchanged = areSettingsEqual(lastPinPushSettings, settings);
 
-  console.log('Cache check - Current hash:', currentSettingsHash);
-  console.log('Cache check - Last hash:', lastPinPushSettingsHash);
+  console.log('Cache check - Settings unchanged:', settingsUnchanged);
   console.log('Cache check - Time since last push:', (now - lastPinPushTime) / 1000, 'seconds');
   console.log('Cache check - Cache duration:', PIN_PUSH_CACHE_DURATION_MS / 1000, 'seconds');
 
   // Check if settings haven't changed and cache is still valid
-  if (currentSettingsHash === lastPinPushSettingsHash &&
-      (now - lastPinPushTime) < PIN_PUSH_CACHE_DURATION_MS) {
+  if (settingsUnchanged && (now - lastPinPushTime) < PIN_PUSH_CACHE_DURATION_MS) {
     console.log('Skipping pin push - cache still valid (settings unchanged, < 30min old)');
     return { shouldSkip: true, disabledPatterns: [] };
   }
@@ -293,9 +309,8 @@ function shouldSkipPinPush(settings) {
  */
 function updatePinPushCache(settings) {
   lastPinPushTime = new Date().getTime();
-  lastPinPushSettingsHash = generateSettingsHash(settings);
   lastPinPushSettings = JSON.parse(JSON.stringify(settings)); // Deep copy
-  console.log('Updated pin push cache - new hash:', lastPinPushSettingsHash);
+  console.log('Updated pin push cache at:', new Date(lastPinPushTime).toISOString());
 }
 
 /**

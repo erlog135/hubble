@@ -87,7 +87,10 @@ Pebble.addEventListener('appmessage', function(e) {
 
     try {
       // Push astronomy events and get count
-      var eventCount = PinPusher.pushAstronomyEvents(activeObserver, new Date(), claySettings);
+      // Use midnight of current day as reference to capture all of today's events
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+      var eventCount = PinPusher.pushAstronomyEvents(activeObserver, today, claySettings);
       console.log('Pushed ' + eventCount + ' events to timeline');
       Pebble.sendAppMessage(
         { 'EVENTS_REFRESHED': eventCount },

@@ -39,18 +39,17 @@ function sendMagneticDeclination(declination) {
     return;
   }
 
-  // Convert declination to integer representation (multiply by 10 for one decimal place)
-  // This gives us precision to 0.1 degrees
-  var declinationTimes10 = Math.round(declination * 10);
+  // Round declination to nearest integer degree
+  var declinationRounded = Math.round(declination);
 
   Pebble.sendAppMessage(
     (function() {
       var dict = {};
-      dict[Keys.DECLINATION] = declinationTimes10;
+      dict[Keys.DECLINATION] = declinationRounded;
       return dict;
     })(),
     function() {
-      console.log('Sent magnetic declination: ' + declination + ' degrees');
+      console.log('Sent magnetic declination: ' + declinationRounded + ' degrees');
     },
     function(err) {
       console.log('Failed to send magnetic declination: ' + JSON.stringify(err));
