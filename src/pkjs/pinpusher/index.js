@@ -48,6 +48,9 @@ function pushAstronomyEvents(observer, date, settings) {
   // Process twilight events
   pinCount += processTwilightEvents(allEvents.twilightEvents);
 
+  // Process solar noon/midnight events
+  pinCount += processSolarNoonMidnightEvents(allEvents.solarNoonMidnightEvents);
+
   // Process seasonal events
   pinCount += processSeasonalEvents(allEvents.seasonalEvents);
 
@@ -125,6 +128,43 @@ function processTwilightEvents(events) {
     }
 
     var pin = pinBuilder.buildTwilightPin(event, sequenceIndex);
+
+    // Skip if we've already processed this pin ID
+    if (processedIds[pin.id]) {
+      continue;
+    }
+    processedIds[pin.id] = true;
+
+    pinCount++;
+    timeline.insertUserPin(pin, function(responseText) {
+      console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+    });
+  }
+
+  return pinCount;
+}
+
+/**
+ * Process and push solar noon/midnight events
+ * @param {Array} events - Array of solar noon/midnight events
+ * @returns {number} Number of pins pushed
+ */
+function processSolarNoonMidnightEvents(events) {
+  var pinCount = 0;
+  var processedIds = {};
+
+  for (var i = 0; i < events.length; i++) {
+    var event = events[i];
+    if (!event.time || !dateUtils.isDateVisibleInTimeline(event.time)) {
+      continue;
+    }
+
+    var sequenceIndex = dateUtils.getSequenceIndexForDate(event.time);
+    if (sequenceIndex === null || sequenceIndex < -2 || sequenceIndex > 2) {
+      continue;
+    }
+
+    var pin = pinBuilder.buildSolarNoonMidnightPin(event, sequenceIndex);
 
     // Skip if we've already processed this pin ID
     if (processedIds[pin.id]) {

@@ -33,14 +33,21 @@ module.exports = [
         "type": "toggle",
         "messageKey": "CFG_SUN_RISE_SET",
         "label": "Sunrise & Sunset",
-        "defaultValue": true,
+        "defaultValue": false,
         "description": "Sun crosses the horizon."
+      },
+      {
+        "type": "toggle",
+        "messageKey": "CFG_SUN_SOLAR_NOON_MIDNIGHT",
+        "label": "Solar Noon & Midnight",
+        "defaultValue": false,
+        "description": "Sun at highest point (noon) and lowest point (midnight) in the sky."
       },
       {
         "type": "toggle",
         "messageKey": "CFG_SUN_SOLSTICES",
         "label": "Solstices",
-        "defaultValue": true,
+        "defaultValue": false,
         "description": "Days with the longest and shortest daylight of the year."
       },
       {

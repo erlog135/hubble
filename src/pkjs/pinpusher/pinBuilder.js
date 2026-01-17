@@ -74,6 +74,10 @@ function generateEventPinId(event, category, sequenceIndex) {
     var twilightKey = subtype + '_' + twilightType;
     var twilightBaseId = PIN_IDS[twilightKey] || twilightKey;
     return sequenceIndex !== undefined ? twilightBaseId + sequenceIndex : twilightBaseId;
+  } else if (category === 'solarNoonMidnight') {
+    var solarKey = 'solar_' + event.type;
+    var solarBaseId = PIN_IDS[solarKey] || solarKey;
+    return sequenceIndex !== undefined ? solarBaseId + sequenceIndex : solarBaseId;
   } else if (category === 'seasonal') {
     return event.type.includes('Equinox') ? PIN_IDS.equinox : PIN_IDS.solstice;
   } else if (category === 'transit') {
@@ -96,7 +100,7 @@ function getBodyId(event, category) {
   var body;
   if (category === 'riseset' || category === 'transit') {
     body = event.body;
-  } else if (category === 'twilight' || category === 'seasonal') {
+  } else if (category === 'twilight' || category === 'seasonal' || category === 'solarNoonMidnight') {
     body = 'Sun';
   } else if (category === 'eclipse') {
     body = event.type === 'solar' ? 'Sun' : 'Moon';
@@ -131,7 +135,7 @@ function getBodyName(event, category) {
   var body;
   if (category === 'riseset' || category === 'transit') {
     body = event.body;
-  } else if (category === 'twilight' || category === 'seasonal') {
+  } else if (category === 'twilight' || category === 'seasonal' || category === 'solarNoonMidnight') {
     body = 'Sun';
   } else if (category === 'eclipse') {
     body = event.type === 'solar' ? 'Sun' : 'Moon';
@@ -363,9 +367,39 @@ function buildLunarApsisPin(event) {
   };
 }
 
+/**
+ * Build a solar noon/midnight event pin
+ * @param {Object} event - The solar noon/midnight event
+ * @param {number} sequenceIndex - Sequence index (-2 to 2)
+ * @returns {Object} Complete pin object
+ */
+function buildSolarNoonMidnightPin(event, sequenceIndex) {
+  var styleKey = event.type === 'noon' ? 'solarNoon' : 'solarMidnight';
+  var style = EVENT_STYLES[styleKey];
+
+  var title = event.type === 'noon' ? 'Solar Noon' : 'Solar Midnight';
+  var pinId = generateEventPinId(event, 'solarNoonMidnight', sequenceIndex);
+
+  return {
+    id: pinId,
+    time: event.time.toISOString(),
+    layout: {
+      type: "genericPin",
+      primaryColor: style.foregroundColor,
+      secondaryColor: style.foregroundColor,
+      backgroundColor: style.backgroundColor,
+      title: title,
+      tinyIcon: "system://images/" + style.tinyIcon,
+      lastUpdated: generateTimestamp()
+    },
+    actions: generatePinActions(event, 'solarNoonMidnight')
+  };
+}
+
 module.exports = {
   buildRiseSetPin: buildRiseSetPin,
   buildTwilightPin: buildTwilightPin,
+  buildSolarNoonMidnightPin: buildSolarNoonMidnightPin,
   buildSeasonalPin: buildSeasonalPin,
   buildTransitPin: buildTransitPin,
   buildEclipsePin: buildEclipsePin,

@@ -9,7 +9,7 @@
 function getAllPossiblePinIds() {
   var pinIds = [];
 
-  // Add recurring event IDs (rise/set and twilight) with sequence numbers
+  // Add recurring event IDs (rise/set, twilight, and solar noon/midnight) with sequence numbers
   var recurringBases = [
     // Rise/set events
     'sun-rise', 'sun-set', 'moon-rise', 'moon-set',
@@ -19,7 +19,9 @@ function getAllPossiblePinIds() {
     'neptune-rise', 'neptune-set', 'pluto-rise', 'pluto-set',
     // Twilight events
     'civil-dawn', 'civil-dusk', 'nautical-dawn', 'nautical-dusk',
-    'astronomical-dawn', 'astronomical-dusk'
+    'astronomical-dawn', 'astronomical-dusk',
+    // Solar noon/midnight events
+    'solar-noon', 'solar-midnight'
   ];
 
   // Add sequence numbers for recurring events
@@ -74,6 +76,10 @@ var PIN_IDS = {
   nautical_dusk: "nautical-dusk",
   astronomical_dawn: "astronomical-dawn",
   astronomical_dusk: "astronomical-dusk",
+
+  // Solar noon/midnight events
+  solar_noon: "solar-noon",
+  solar_midnight: "solar-midnight",
 
   // Seasonal events (simplified - events occur far enough apart)
   equinox: "equinox",
@@ -146,6 +152,16 @@ var EVENT_STYLES = {
     foregroundColor: "#000000",
     backgroundColor: "#FF5555",
     tinyIcon: "NOTIFICATION_GENERIC"
+  },
+  solarNoon: {
+    foregroundColor: "#000000",
+    backgroundColor: "#FFFF55",
+    tinyIcon: "TIMELINE_SUN"
+  },
+  solarMidnight: {
+    foregroundColor: "#FFFFFF",
+    backgroundColor: "#000055",
+    tinyIcon: "TIMELINE_SUN"
   },
   equinox: {
     foregroundColor: "#000000",

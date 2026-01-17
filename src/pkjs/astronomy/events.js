@@ -403,6 +403,65 @@ function getNextLunarApsis(date) {
 }
 
 /**
+ * Get solar noon and midnight times for around a given date.
+ * Solar noon is when the Sun reaches its highest point (hour angle 0).
+ * Solar midnight is when the Sun reaches its lowest point (hour angle 12).
+ * Returns previous 2, current day's, and next 2 solar noon/midnight times.
+ * @param {Observer} observer - The observer location
+ * @param {Date} date - The reference date (typically today's date)
+ * @returns {Object} Object with noon and midnight arrays containing Date objects
+ *                   {noon:[prev-1, prev, today, next, next+1], midnight:[prev-1, prev, today, next, next+1]}
+ */
+function getSolarNoonMidnightSequence(observer, date) {
+  var referenceDate = date || new Date();
+
+  // Helper function to find the next hour angle event
+  function findNextHourAngle(hourAngle, startDate) {
+    return Astronomy.SearchHourAngle('Sun', observer, hourAngle, startDate, +1);
+  }
+
+  // Helper function to find the previous hour angle event
+  function findPreviousHourAngle(hourAngle, startDate) {
+    return Astronomy.SearchHourAngle('Sun', observer, hourAngle, startDate, -1);
+  }
+
+  // Get solar noon events (hour angle 0)
+  var noonToday = findNextHourAngle(0, referenceDate);
+  var noonPrev = noonToday ? findPreviousHourAngle(0, noonToday.time.date) : null;
+  var noonPrevPrev = noonPrev ? findPreviousHourAngle(0, noonPrev.time.date) : null;
+  var noonNext = noonToday ? findNextHourAngle(0, new Date(noonToday.time.date.getTime() + 60000)) : null;
+  var noonNextNext = noonNext ? findNextHourAngle(0, new Date(noonNext.time.date.getTime() + 60000)) : null;
+
+  var noonSequence = [
+    noonPrevPrev ? noonPrevPrev.time.date : null,
+    noonPrev ? noonPrev.time.date : null,
+    noonToday ? noonToday.time.date : null,
+    noonNext ? noonNext.time.date : null,
+    noonNextNext ? noonNextNext.time.date : null
+  ];
+
+  // Get solar midnight events (hour angle 12)
+  var midnightToday = findNextHourAngle(12, referenceDate);
+  var midnightPrev = midnightToday ? findPreviousHourAngle(12, midnightToday.time.date) : null;
+  var midnightPrevPrev = midnightPrev ? findPreviousHourAngle(12, midnightPrev.time.date) : null;
+  var midnightNext = midnightToday ? findNextHourAngle(12, new Date(midnightToday.time.date.getTime() + 60000)) : null;
+  var midnightNextNext = midnightNext ? findNextHourAngle(12, new Date(midnightNext.time.date.getTime() + 60000)) : null;
+
+  var midnightSequence = [
+    midnightPrevPrev ? midnightPrevPrev.time.date : null,
+    midnightPrev ? midnightPrev.time.date : null,
+    midnightToday ? midnightToday.time.date : null,
+    midnightNext ? midnightNext.time.date : null,
+    midnightNextNext ? midnightNextNext.time.date : null
+  ];
+
+  return {
+    noon: noonSequence,
+    midnight: midnightSequence
+  };
+}
+
+/**
  * Check if cached events are still valid (within time limit and observer hasn't moved significantly)
  * @param {Object} cacheEntry - The cached entry with timestamp and observer
  * @param {Observer} observer - Current observer location
@@ -470,6 +529,7 @@ function getAllEvents(observer, date, settings) {
   var sunCivilTwilight = cfg.CFG_SUN_CIVIL_DAWN_DUSK !== false;
   var sunNauticalTwilight = cfg.CFG_SUN_NAUTICAL_DAWN_DUSK !== false;
   var sunAstronomicalTwilight = cfg.CFG_SUN_ASTRONOMICAL_DAWN_DUSK !== false;
+  var sunSolarNoonMidnight = cfg.CFG_SUN_SOLAR_NOON_MIDNIGHT !== false;
   var sunSolstices = cfg.CFG_SUN_SOLSTICES !== false;
   var sunEquinoxes = cfg.CFG_SUN_EQUINOXES !== false;
   var sunEclipses = cfg.CFG_SUN_ECLIPSES !== false;
@@ -487,6 +547,7 @@ function getAllEvents(observer, date, settings) {
   var events = {
     riseSetEvents: [],
     twilightEvents: [],
+    solarNoonMidnightEvents: [],
     seasonalEvents: [],
     transitEvents: [],
     eclipseEvents: [],
@@ -610,6 +671,31 @@ function getAllEvents(observer, date, settings) {
     console.log('Error getting twilight events:', e.message);
   }
 
+  // Get solar noon/midnight events
+  if (sunSolarNoonMidnight) {
+    try {
+      var solarNoonMidnight = getSolarNoonMidnightSequence(observer, referenceDate);
+      solarNoonMidnight.noon.forEach(function(noonTime) {
+        if (noonTime) {
+          events.solarNoonMidnightEvents.push({
+            type: 'noon',
+            time: noonTime
+          });
+        }
+      });
+      solarNoonMidnight.midnight.forEach(function(midnightTime) {
+        if (midnightTime) {
+          events.solarNoonMidnightEvents.push({
+            type: 'midnight',
+            time: midnightTime
+          });
+        }
+      });
+    } catch (e) {
+      console.log('Error getting solar noon/midnight events:', e.message);
+    }
+  }
+
   // Get seasonal events (equinoxes/solstices)
   if (sunSolstices || sunEquinoxes) {
     try {
@@ -683,6 +769,7 @@ function getAllEvents(observer, date, settings) {
 module.exports = {
   getRiseSetSequence,
   getTwilightSequence,
+  getSolarNoonMidnightSequence,
   getNextSeasonalEvent,
   getNextTransit,
   getNextEclipse,

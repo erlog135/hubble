@@ -43,6 +43,9 @@ function getDisabledPinIdPatterns(oldSettings, newSettings) {
   if (wasDisabled('CFG_SUN_ASTRONOMICAL_DAWN_DUSK')) {
     disabledPatterns.push('astronomical-dawn', 'astronomical-dusk');
   }
+  if (wasDisabled('CFG_SUN_SOLAR_NOON_MIDNIGHT')) {
+    disabledPatterns.push('solar-noon', 'solar-midnight');
+  }
   if (wasDisabled('CFG_SUN_SOLSTICES')) {
     disabledPatterns.push('solstice');
   }
