@@ -25,30 +25,24 @@ function isDateInTimelineRange(date) {
  */
 function isDateVisibleInTimeline(date) {
   var now = new Date();
-  var twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
-  var twoDaysLater = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
-  return date >= twoDaysAgo && date <= twoDaysLater;
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var eventDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  var msPerDay = 1000 * 60 * 60 * 24;
+  var dayDifference = Math.floor((eventDay - today) / msPerDay);
+  return dayDifference >= -2 && dayDifference <= 2;
 }
 
 /**
- * Calculate the sequence index (-2 to 2) for a date relative to today
+ * Calculate the day difference between today and the event date.
  * @param {Date} eventDate - The event date
- * @returns {number} Sequence index (-2, -1, 0, 1, 2) or null if outside range
+ * @returns {number} Difference in days (positive if in future, negative if in past)
  */
 function getSequenceIndexForDate(eventDate) {
   var now = new Date();
-  var eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
   var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  // Calculate difference in days
-  var diffTime = eventDay.getTime() - today.getTime();
-  var diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-  // Return sequence index if within -2 to 2 range
-  if (diffDays >= -2 && diffDays <= 2) {
-    return diffDays;
-  }
-  return null; // Outside visible range
+  var eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+  var msPerDay = 1000 * 60 * 60 * 24;
+  return Math.floor((eventDay - today) / msPerDay);
 }
 
 module.exports = {
