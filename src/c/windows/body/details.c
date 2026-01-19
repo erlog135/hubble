@@ -2,6 +2,7 @@
 #include "../../style.h"
 #include "../../utils/bodymsg.h"
 #include "options.h"
+#include "action_indicator.h"
 
 #define HERO_IMAGE_SIZE 50
 #define GRID_MARGIN 4
@@ -25,6 +26,7 @@ static TextLayer *s_long_text_layer;
 static GDrawCommandImage *s_pdc_image;
 static GBitmap *s_bitmap_image;
 static StatusBarLayer *s_status_layer;
+static Layer *s_action_indicator_layer;
 
 static int16_t s_page_height;
 static DetailsContent s_content;
@@ -269,6 +271,11 @@ static void prv_window_load(Window *window) {
   status_bar_layer_set_colors(s_status_layer, layout->background, layout->foreground);
   layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
 
+  // Create action indicator (initially hidden during loading)
+  s_action_indicator_layer = action_indicator_create(bounds);
+  action_indicator_add_to_window(window);
+  action_indicator_set_visible(!prv_is_loading());
+
   const GRect scroll_bounds = GRect(bounds.origin.x,
                                     bounds.origin.y + STATUS_BAR_LAYER_HEIGHT,
                                     bounds.size.w, bounds.size.h - STATUS_BAR_LAYER_HEIGHT);
@@ -403,6 +410,7 @@ static void prv_window_unload(Window *window) {
     status_bar_layer_destroy(s_status_layer);
     s_status_layer = NULL;
   }
+  action_indicator_destroy();
   if (s_scroll_layer) {
     scroll_layer_destroy(s_scroll_layer);
     s_scroll_layer = NULL;
@@ -460,7 +468,10 @@ void details_show(const DetailsContent *content) {
   if (content) {
     s_content = *content;
     s_is_loading = false;
-    
+
+    // Show action indicator now that loading is complete
+    action_indicator_set_visible(true);
+
     // Deregister bodymsg callbacks after successfully receiving body data
     // This allows other windows (like events) to take control of message handling
     bodymsg_deregister_callbacks();
@@ -495,11 +506,15 @@ void details_show_body(int body_id) {
     // Show window with loading content
     s_content = s_loading_content;
     s_is_loading = true;
+    // Hide action indicator during loading
+    action_indicator_set_visible(false);
     window_stack_push(s_window, true);
   } else {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to request body data for ID %d", body_id);
     // Fallback to default content if request fails
     s_content = s_default_content;
+    // Not loading, so show action indicator
+    action_indicator_set_visible(true);
     window_stack_push(s_window, true);
   }
 }
