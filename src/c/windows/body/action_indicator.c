@@ -34,6 +34,7 @@ void action_indicator_destroy(void) {
   }
 }
 
+//done like how the system does but with accessible functions
 void action_indicator_draw(GContext *ctx, Layer *layer) {
   // Don't draw if not visible
   if (!s_action_indicator_visible) {

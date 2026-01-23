@@ -9,11 +9,11 @@
 #define GRID_ROWS 2
 #define GRID_COLS 2
 #define GRID_ROW_HEIGHT 18
-#define TITLE_TOP_MARGIN 2
+#define TITLE_TOP_MARGIN 0
 #define TITLE_BOTTOM_MARGIN 4
 #define HERO_IMAGE_FRAME_PADDING 6
-#define HERO_IMAGE_BOTTOM_MARGIN 6
-#define DETAIL_BOTTOM_MARGIN 6
+#define HERO_IMAGE_BOTTOM_MARGIN 2
+#define DETAIL_BOTTOM_MARGIN 2
 #define LONG_TEXT_TOP_MARGIN 8
 
 static Window *s_window;
@@ -37,7 +37,7 @@ static bool prv_is_loading(void) {
 }
 
 static const DetailsContent s_default_content = {
-    .title_text = "Moon",
+    .title_text = "",
     .detail_text = "Waning Crescent",
     .grid_top_left = "RISE",
     .grid_top_right = "SET",
@@ -140,20 +140,27 @@ static void prv_format_additional_info(char *buffer, size_t buffer_size) {
   int dir_index = ((s_content.azimuth_deg + 22) / 45) % 8;  // +22 for proper rounding
   snprintf(az_str, sizeof(az_str), "%d° %s", s_content.azimuth_deg, directions[dir_index]);
 
-  // Format illumination (magnitude)
-  char illum_str[32];
-  int magnitude_int = s_content.illumination_x10 / 10;
-  int magnitude_frac = abs(s_content.illumination_x10) % 10;
-  if (s_content.illumination_x10 < 0) {
-    snprintf(illum_str, sizeof(illum_str), "-%d.%d", -magnitude_int, magnitude_frac);
+  // Combine into formatted string.
+  // If the body is the Sun or beyond (>= 9), do not display illumination.
+  if (s_content.body_id >= 9) {
+    snprintf(buffer, buffer_size,
+             "Altitude\n%s\n\nAzimuth\n%s",
+             alt_str, az_str);
   } else {
-    snprintf(illum_str, sizeof(illum_str), "+%d.%d", magnitude_int, magnitude_frac);
-  }
+    // Format illumination (magnitude)
+    char illum_str[32];
+    int magnitude_int = s_content.illumination_x10 / 10;
+    int magnitude_frac = abs(s_content.illumination_x10) % 10;
+    if (s_content.illumination_x10 < 0) {
+      snprintf(illum_str, sizeof(illum_str), "-%d.%d", -magnitude_int, magnitude_frac);
+    } else {
+      snprintf(illum_str, sizeof(illum_str), "+%d.%d", magnitude_int, magnitude_frac);
+    }
 
-  // Combine into formatted string
-  snprintf(buffer, buffer_size,
-           "Altitude\n%s\n\nAzimuth\n%s\n\nIllumination\n%s",
-           alt_str, az_str, illum_str);
+    snprintf(buffer, buffer_size,
+             "Altitude\n%s\n\nAzimuth\n%s\n\nIllumination\n%s",
+             alt_str, az_str, illum_str);
+  }
 }
 
 static void prv_update_content_display(void) {
@@ -319,33 +326,137 @@ static void prv_window_load(Window *window) {
   }
   const GSize hero_size = prv_get_image_size();
   const int16_t image_layer_height = hero_size.h + HERO_IMAGE_FRAME_PADDING;
-  s_image_layer = layer_create(GRect(0, y_cursor, bounds.size.w, image_layer_height));
-  layer_set_update_proc(s_image_layer, prv_draw_image);
-  scroll_layer_add_child(s_scroll_layer, s_image_layer);
-  y_cursor += image_layer_height + HERO_IMAGE_BOTTOM_MARGIN;
 
-  // Detail text
-  const GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
-  GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 60);
-  const GSize detail_size =
-      prv_calc_text_size(s_content.detail_text, detail_font, detail_frame);
-  detail_frame.size.h = detail_size.h > 0 ? detail_size.h : 20;
-  s_detail_layer = text_layer_create(detail_frame);
-  text_layer_set_text(s_detail_layer, s_content.detail_text);
-  text_layer_set_background_color(s_detail_layer, GColorClear);
-  text_layer_set_text_color(s_detail_layer, layout->foreground);
-  text_layer_set_font(s_detail_layer, detail_font);
-  text_layer_set_overflow_mode(s_detail_layer, GTextOverflowModeWordWrap);
-  text_layer_set_text_alignment(s_detail_layer, GTextAlignmentCenter);
-  scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_detail_layer));
+  if (PBL_IF_ROUND_ELSE(1, 0)) {
+    // Round watch: grid columns on left and right of image, image centered in window (horizontally and vertically)
+    // Use raw image dimensions (no padding) and full window dimensions (no status bar) for perfect centering
+    const int16_t grid_row_height = GRID_ROW_HEIGHT;
+    
+    // Center the image horizontally in the full window using raw image dimensions
+    const int16_t image_center_x = bounds.size.w / 2;
+    const int16_t image_start_x = image_center_x - (hero_size.w / 2);
+    
+    // Calculate available space on each side of the centered image
+    const int16_t left_space = image_start_x;
+    const int16_t right_space = bounds.size.w - (image_start_x + hero_size.w);
+    const int16_t grid_column_width = (left_space < right_space ? left_space : right_space) - GRID_MARGIN;
+    
+    // Position grid columns on either side of the centered image
+    const int16_t left_grid_x = GRID_MARGIN;
+    const int16_t right_grid_x = image_start_x + hero_size.w + GRID_MARGIN;
+    
+    // Center the image vertically in the full window using raw image dimensions
+    const int16_t image_center_y = bounds.size.h / 2;
+    const int16_t image_start_y = image_center_y - (hero_size.h / 2) - STATUS_BAR_LAYER_HEIGHT;
+    const int16_t grid_y = image_start_y + (hero_size.h - (grid_row_height * GRID_ROWS + GRID_MARGIN)) / 2;
+    
+    // Image layer dimensions (include padding for drawing)
+    const int16_t image_layer_width = hero_size.w + HERO_IMAGE_FRAME_PADDING;
+    const int16_t image_layer_height = hero_size.h + HERO_IMAGE_FRAME_PADDING;
+    // Position layer so that when drawing function centers image within layer, image is centered in window
+    // Drawing function centers at (layer.w/2, layer.h/2) relative to layer origin
+    // We want image center at (bounds.size.w/2, bounds.size.h/2)
+    const int16_t image_layer_x = image_center_x - (image_layer_width / 2);
+    const int16_t image_layer_y = image_center_y - (image_layer_height / 2) - STATUS_BAR_LAYER_HEIGHT;
 
-  y_cursor += detail_frame.size.h + DETAIL_BOTTOM_MARGIN;
+    // Left column (RISE)
+    for (int row = 0; row < GRID_ROWS; ++row) {
+      GRect frame = GRect(left_grid_x, grid_y + row * (grid_row_height + GRID_MARGIN), grid_column_width, grid_row_height);
+      s_grid_layers[row][0] = text_layer_create(frame);
+      text_layer_set_text(s_grid_layers[row][0], row == 0 ? s_content.grid_top_left : s_content.grid_bottom_left);
+      text_layer_set_background_color(s_grid_layers[row][0], GColorClear);
+      text_layer_set_text_color(s_grid_layers[row][0], layout->foreground);
+      text_layer_set_font(s_grid_layers[row][0], fonts_get_system_font(PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_18_BOLD)));
+      text_layer_set_overflow_mode(s_grid_layers[row][0], GTextOverflowModeWordWrap);
+      text_layer_set_text_alignment(s_grid_layers[row][0], GTextAlignmentCenter);
+      scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][0]));
+    }
 
-  // Grid values (2x2)
-  const GRect grid_bounds =
-      GRect(0, y_cursor, bounds.size.w, GRID_ROW_HEIGHT * GRID_ROWS + GRID_MARGIN);
-  prv_create_grid_layers(grid_bounds, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
-  y_cursor += grid_bounds.size.h + LONG_TEXT_TOP_MARGIN;
+    // Image centered in window (horizontally and vertically)
+    // Layer is positioned to account for padding, but image itself is perfectly centered
+    s_image_layer = layer_create(GRect(image_layer_x, image_layer_y, image_layer_width, image_layer_height));
+    layer_set_update_proc(s_image_layer, prv_draw_image);
+    scroll_layer_add_child(s_scroll_layer, s_image_layer);
+
+    // Right column (SET)
+    for (int row = 0; row < GRID_ROWS; ++row) {
+      GRect frame = GRect(right_grid_x, grid_y + row * (grid_row_height + GRID_MARGIN), grid_column_width, grid_row_height);
+      s_grid_layers[row][1] = text_layer_create(frame);
+      text_layer_set_text(s_grid_layers[row][1], row == 0 ? s_content.grid_top_right : s_content.grid_bottom_right);
+      text_layer_set_background_color(s_grid_layers[row][1], GColorClear);
+      text_layer_set_text_color(s_grid_layers[row][1], layout->foreground);
+      text_layer_set_font(s_grid_layers[row][1], fonts_get_system_font(PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_18_BOLD)));
+      text_layer_set_overflow_mode(s_grid_layers[row][1], GTextOverflowModeWordWrap);
+      text_layer_set_text_alignment(s_grid_layers[row][1], GTextAlignmentCenter);
+      scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][1]));
+    }
+
+    y_cursor = image_layer_y + image_layer_height + HERO_IMAGE_BOTTOM_MARGIN;
+  } else {
+    // Non-round watch: current layout (image, detail text, then grid)
+    s_image_layer = layer_create(GRect(0, y_cursor, bounds.size.w, image_layer_height));
+    layer_set_update_proc(s_image_layer, prv_draw_image);
+    scroll_layer_add_child(s_scroll_layer, s_image_layer);
+    y_cursor += image_layer_height + HERO_IMAGE_BOTTOM_MARGIN;
+
+    // Detail text
+    const GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
+    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 60);
+    const GSize detail_size =
+        prv_calc_text_size(s_content.detail_text, detail_font, detail_frame);
+    detail_frame.size.h = detail_size.h > 0 ? detail_size.h : 20;
+    s_detail_layer = text_layer_create(detail_frame);
+    text_layer_set_text(s_detail_layer, s_content.detail_text);
+    text_layer_set_background_color(s_detail_layer, GColorClear);
+    text_layer_set_text_color(s_detail_layer, layout->foreground);
+    text_layer_set_font(s_detail_layer, detail_font);
+    text_layer_set_overflow_mode(s_detail_layer, GTextOverflowModeWordWrap);
+    text_layer_set_text_alignment(s_detail_layer, GTextAlignmentCenter);
+    scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_detail_layer));
+
+    y_cursor += detail_frame.size.h + DETAIL_BOTTOM_MARGIN;
+
+    // Grid values (2x2)
+    const GRect grid_bounds =
+        GRect(0, y_cursor, bounds.size.w, GRID_ROW_HEIGHT * GRID_ROWS + GRID_MARGIN);
+    prv_create_grid_layers(grid_bounds, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+    y_cursor += grid_bounds.size.h;
+  }
+
+  // Detail text (for round watches, placed after image)
+  if (PBL_IF_ROUND_ELSE(1, 0)) {
+    const GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
+    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 60);
+    const GSize detail_size =
+        prv_calc_text_size(s_content.detail_text, detail_font, detail_frame);
+    detail_frame.size.h = detail_size.h > 0 ? detail_size.h : 20;
+    s_detail_layer = text_layer_create(detail_frame);
+    text_layer_set_text(s_detail_layer, s_content.detail_text);
+    text_layer_set_background_color(s_detail_layer, GColorClear);
+    text_layer_set_text_color(s_detail_layer, layout->foreground);
+    text_layer_set_font(s_detail_layer, detail_font);
+    text_layer_set_overflow_mode(s_detail_layer, GTextOverflowModeWordWrap);
+    text_layer_set_text_alignment(s_detail_layer, GTextAlignmentCenter);
+    scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_detail_layer));
+
+    y_cursor += detail_frame.size.h + DETAIL_BOTTOM_MARGIN;
+
+    // Adjust spacing so first page ends at exactly scroll_bounds.size.h
+    // The scrollable area height is bounds.size.h - STATUS_BAR_LAYER_HEIGHT
+    const int16_t scroll_height = bounds.size.h - STATUS_BAR_LAYER_HEIGHT;
+    const int16_t min_spacing = LONG_TEXT_TOP_MARGIN;
+    const int16_t target_y = scroll_height;
+    
+    if (y_cursor + min_spacing <= target_y) {
+      // Can fit minimum spacing and reach target height
+      y_cursor = target_y;
+    } else {
+      // Content too tall, use minimum spacing
+      y_cursor += min_spacing;
+    }
+  } else {
+    y_cursor += LONG_TEXT_TOP_MARGIN;
+  }
 
   // Long-form text after the first "page"
   const GFont long_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
@@ -359,7 +470,7 @@ static void prv_window_load(Window *window) {
   text_layer_set_text_color(s_long_text_layer, layout->foreground);
   text_layer_set_font(s_long_text_layer, long_font);
   text_layer_set_overflow_mode(s_long_text_layer, GTextOverflowModeWordWrap);
-  text_layer_set_text_alignment(s_long_text_layer, GTextAlignmentLeft);
+  text_layer_set_text_alignment(s_long_text_layer, PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentLeft));
   scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_long_text_layer));
 
   y_cursor += long_size.h + GRID_MARGIN;

@@ -21,6 +21,7 @@
     "sdkVersion": "3",
     "enableMultiJS": true,
     "targetPlatforms": [
+      "chalk",
       "flint"
     ],
     "capabilities": [

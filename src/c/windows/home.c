@@ -69,7 +69,7 @@ static void prv_window_load(Window *window) {
       .callback = prv_catalog_menu_select_callback,
   };
   s_catalog_items[1] = (SimpleMenuItem){
-      .title = "Planets...",
+      .title = "Planets  >",
       .callback = prv_catalog_menu_select_callback,
   };
   s_catalog_items[2] = (SimpleMenuItem){
@@ -77,12 +77,12 @@ static void prv_window_load(Window *window) {
       .callback = prv_catalog_menu_select_callback,
   };
   s_catalog_items[3] = (SimpleMenuItem){
-      .title = "Constellations...",
+      .title = "Constellations  >",
       .subtitle = "Zodiac",
       .callback = prv_catalog_menu_select_callback,
   };
   s_catalog_items[4] = (SimpleMenuItem){
-      .title = "Constellations...",
+      .title = "Constellations  >",
       .subtitle = "Other",
       .callback = prv_catalog_menu_select_callback,
   };
