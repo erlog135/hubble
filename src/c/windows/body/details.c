@@ -72,11 +72,6 @@ static GSize prv_get_image_size(void) {
   return GSize(HERO_IMAGE_SIZE, HERO_IMAGE_SIZE);
 }
 
-static GSize prv_calc_text_size(const char *text, GFont font, GRect frame) {
-  return graphics_text_layout_get_content_size(text, font, frame,
-                                               GTextOverflowModeWordWrap,
-                                               GTextAlignmentLeft);
-}
 
 static void prv_draw_image(Layer *layer, GContext *ctx) {
   const GSize image_bounds = prv_get_image_size();
@@ -302,10 +297,7 @@ static void prv_window_load(Window *window) {
   int16_t y_cursor = TITLE_TOP_MARGIN;
   const GFont title_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   GRect title_frame =
-      GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 28);
-  const GSize title_size =
-      prv_calc_text_size(s_content.title_text, title_font, title_frame);
-  title_frame.size.h = title_size.h > 0 ? title_size.h : 20;
+      GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 21);
   s_title_layer = text_layer_create(title_frame);
   text_layer_set_text(s_title_layer, s_content.title_text);
   text_layer_set_background_color(s_title_layer, GColorClear);
@@ -401,10 +393,7 @@ static void prv_window_load(Window *window) {
 
     // Detail text
     const GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
-    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 60);
-    const GSize detail_size =
-        prv_calc_text_size(s_content.detail_text, detail_font, detail_frame);
-    detail_frame.size.h = detail_size.h > 0 ? detail_size.h : 20;
+    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 21);
     s_detail_layer = text_layer_create(detail_frame);
     text_layer_set_text(s_detail_layer, s_content.detail_text);
     text_layer_set_background_color(s_detail_layer, GColorClear);
@@ -426,10 +415,7 @@ static void prv_window_load(Window *window) {
   // Detail text (for round watches, placed after image)
   if (PBL_IF_ROUND_ELSE(1, 0)) {
     const GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
-    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 60);
-    const GSize detail_size =
-        prv_calc_text_size(s_content.detail_text, detail_font, detail_frame);
-    detail_frame.size.h = detail_size.h > 0 ? detail_size.h : 20;
+    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 21);
     s_detail_layer = text_layer_create(detail_frame);
     text_layer_set_text(s_detail_layer, s_content.detail_text);
     text_layer_set_background_color(s_detail_layer, GColorClear);
@@ -461,8 +447,6 @@ static void prv_window_load(Window *window) {
   // Long-form text after the first "page"
   const GFont long_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
   GRect long_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, bounds.size.h);
-  const GSize long_size = prv_calc_text_size(s_content.long_text, long_font, long_frame);
-  // long_frame.size.h = long_size.h;
 
   s_long_text_layer = text_layer_create(long_frame);
   text_layer_set_text(s_long_text_layer, s_content.long_text);
@@ -473,7 +457,7 @@ static void prv_window_load(Window *window) {
   text_layer_set_text_alignment(s_long_text_layer, PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentLeft));
   scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_long_text_layer));
 
-  y_cursor += long_size.h + GRID_MARGIN;
+  y_cursor += bounds.size.h + GRID_MARGIN;
 
   // Ensure at least two screens of scrollable content.
   const int16_t min_height = s_page_height * 2;
