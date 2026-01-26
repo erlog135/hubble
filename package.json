@@ -159,6 +159,101 @@
         },
         {
           "type": "raw",
+          "name": "CONSTELLATION_ARIES",
+          "file": "constellations/Aries_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_TAURUS",
+          "file": "constellations/Taurus_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_GEMINI",
+          "file": "constellations/Gemini_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_CANCER",
+          "file": "constellations/Cancer_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_LEO",
+          "file": "constellations/Leo_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_VIRGO",
+          "file": "constellations/Virgo_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_LIBRA",
+          "file": "constellations/Libra_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_SCORPIUS",
+          "file": "constellations/Scorpius_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_SAGITTARIUS",
+          "file": "constellations/Sagittarius_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_CAPRICORNUS",
+          "file": "constellations/Capricorn_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_AQUARIUS",
+          "file": "constellations/Aquarius_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_PISCES",
+          "file": "constellations/Pisces_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_ORION",
+          "file": "constellations/Orion_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_URSA_MAJOR",
+          "file": "constellations/Ursa Major_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_URSA_MINOR",
+          "file": "constellations/Ursa Minor_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_CASSIOPEIA",
+          "file": "constellations/Cassiopeia_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_CYGNUS",
+          "file": "constellations/Cygnus_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_CRUX",
+          "file": "constellations/Crux_80px.pdc"
+        },
+        {
+          "type": "raw",
+          "name": "CONSTELLATION_LYRA",
+          "file": "constellations/Lyra_80px.pdc"
+        },
+        {
+          "type": "raw",
           "name": "SUN",
           "file": "stars/Sun_50px.pdc"
         },

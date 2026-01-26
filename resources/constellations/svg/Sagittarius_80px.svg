@@ -1,0 +1,32 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_524_96)">
+<rect width="80" height="80" fill="black"/>
+<path d="M22 1L27 11L32 14L38 12V25M38 25L43 29M38 25L33 32M43 29L53 34M43 29L51 24M43 29L37 37M53 34L51 24M53 34L60 37M53 34V47M51 24L60 12M60 37L53 47M60 37L71 29M53 47L37 37M53 47L60 55M37 37L33 32M33 32H19L9 43L16 63L24 76M24 76L35 71M24 76L35 79" stroke="#AAAAAA"/>
+<rect x="69.5" y="27.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="58.5" y="35.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="51.5" y="32.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="51.5" y="44.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="35.5" y="35.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="57.5" y="52.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="16.5" y="30.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="7.5" y="41.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="13.5" y="61.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="21.5" y="73.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="32.5" y="76.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="32.5" y="69.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="40.5" y="27.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="35.5" y="23.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="36.5" y="9.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="30.5" y="12.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="25.5" y="9.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="20.5" y="-0.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="30.5" y="30.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="49.5" y="22.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="57.5" y="10.5" width="4" height="4" fill="white" stroke="black"/>
+</g>
+<defs>
+<clipPath id="clip0_524_96">
+<rect width="80" height="80" fill="white"/>
+</clipPath>
+</defs>
+</svg>

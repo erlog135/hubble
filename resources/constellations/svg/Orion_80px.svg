@@ -1,0 +1,25 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_564_276)">
+<rect width="80" height="80" fill="black"/>
+<path d="M38 56L47 77L25 79L31 60M38 56L44 39M38 56L35 58L31 60M31 60L24.5 35M24.5 35L21 28L16 16M24.5 35L38 30L44 39M16 16L23 1M16 16L19 15L29 1M44 39L66 40M66 40V35L63 31M66 40L65 44L62 51L59 53" stroke="#AAAAAA"/>
+<rect x="22.5" y="32.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="35.5" y="27.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="18.5" y="13.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="12.5" y="14.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="20.5" y="-0.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="27.5" y="-0.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="41.5" y="36.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="63.5" y="38.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="60.5" y="28.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="57.5" y="50.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="36.5" y="54.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="28.5" y="58.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="22.5" y="76.5" width="4" height="4" fill="white" stroke="black"/>
+<rect x="45.5" y="75.5" width="4" height="4" fill="white" stroke="black"/>
+</g>
+<defs>
+<clipPath id="clip0_564_276">
+<rect width="80" height="80" fill="white"/>
+</clipPath>
+</defs>
+</svg>
