@@ -64,7 +64,7 @@ static void prv_window_load(Window *window) {
     }
 
     s_menu_sections[0] = (SimpleMenuSection){
-      .title = "Favorites",
+      .title = PBL_IF_ROUND_ELSE("        Favorites", "Favorites"),
       .num_items = s_num_favorites,
       .items = s_menu_items,
     };

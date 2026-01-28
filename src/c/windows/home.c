@@ -2,6 +2,8 @@
 #include "favorites.h"
 #include "events.h"
 #include "./catalog/planets.h"
+#include "./catalog/constellations_zodiac.h"
+#include "./catalog/constellations.h"
 #include "./body/details.h"
 #include "../style.h"
 
@@ -40,6 +42,12 @@ static void prv_catalog_menu_select_callback(int index, void *context) {
       break;
     case 2:  // The Sun
       details_show_body(9);
+      break;
+    case 3:  // Constellations - Zodiac
+      constellations_zodiac_menu_show();
+      break;
+    case 4:  // Constellations - Other
+      constellations_menu_show();
       break;
     default:
       vibes_short_pulse();
@@ -89,14 +97,14 @@ static void prv_window_load(Window *window) {
 
   // Main menu section
   s_menu_sections[0] = (SimpleMenuSection){
-      .title = "Menu",
+      .title = PBL_IF_ROUND_ELSE("        Menu", "Menu"),
       .num_items = ARRAY_LENGTH(s_main_items),
       .items = s_main_items,
   };
 
   // Catalog section
   s_menu_sections[1] = (SimpleMenuSection){
-      .title = "Catalog",
+      .title = PBL_IF_ROUND_ELSE("        Catalog", "Catalog"),
       .num_items = ARRAY_LENGTH(s_catalog_items),
       .items = s_catalog_items,
   };

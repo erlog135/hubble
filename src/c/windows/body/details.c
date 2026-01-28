@@ -5,6 +5,8 @@
 #include "action_indicator.h"
 
 #define HERO_IMAGE_SIZE 50
+#define CONSTELLATION_IMAGE_SIZE 80
+#define CONSTELLATION_BODY_ID_START 10
 #define GRID_MARGIN 4
 #define GRID_ROWS 2
 #define GRID_COLS 2
@@ -36,22 +38,6 @@ static bool prv_is_loading(void) {
   return s_is_loading;
 }
 
-static const DetailsContent s_default_content = {
-    .title_text = "",
-    .detail_text = "Waning Crescent",
-    .grid_top_left = "RISE",
-    .grid_top_right = "SET",
-    .grid_bottom_left = "8:00 PM",
-    .grid_bottom_right = "11:30 AM",
-    .long_text = "",  // Empty initially
-    .image_resource_id = RESOURCE_ID_FULL_MOON,
-    .image_type = DETAILS_IMAGE_TYPE_BITMAP,
-    .azimuth_deg = 0,
-    .altitude_deg = 0,
-    .illumination_x10 = 0,
-    .body_id = 0,  // Moon
-};
-
 static const DetailsContent s_loading_content = {
     .title_text = "Loading...",
     .detail_text = "Fetching data",
@@ -60,7 +46,7 @@ static const DetailsContent s_loading_content = {
     .grid_bottom_left = "--:--",
     .grid_bottom_right = "--:--",
     .long_text = "Loading...\nLoading...",
-    .image_resource_id = RESOURCE_ID_FULL_MOON,  // Keep default image for now
+    .image_resource_id = 0,  // No image during loading
     .image_type = DETAILS_IMAGE_TYPE_BITMAP,
     .azimuth_deg = 0,
     .altitude_deg = 0,
@@ -68,7 +54,14 @@ static const DetailsContent s_loading_content = {
     .body_id = -1,  // Not a specific body
 };
 
+static bool prv_is_constellation(void) {
+  return s_content.body_id >= CONSTELLATION_BODY_ID_START;
+}
+
 static GSize prv_get_image_size(void) {
+  if (prv_is_constellation()) {
+    return GSize(CONSTELLATION_IMAGE_SIZE, CONSTELLATION_IMAGE_SIZE);
+  }
   return GSize(HERO_IMAGE_SIZE, HERO_IMAGE_SIZE);
 }
 
@@ -107,11 +100,13 @@ static void prv_update_image(void) {
     s_bitmap_image = NULL;
   }
 
-  // Load new image
-  if (s_content.image_type == DETAILS_IMAGE_TYPE_BITMAP) {
-    s_bitmap_image = gbitmap_create_with_resource(s_content.image_resource_id);
-  } else {
-    s_pdc_image = gdraw_command_image_create_with_resource(s_content.image_resource_id);
+  // Load new image only if resource_id is valid (non-zero)
+  if (s_content.image_resource_id != 0) {
+    if (s_content.image_type == DETAILS_IMAGE_TYPE_BITMAP) {
+      s_bitmap_image = gbitmap_create_with_resource(s_content.image_resource_id);
+    } else {
+      s_pdc_image = gdraw_command_image_create_with_resource(s_content.image_resource_id);
+    }
   }
 
   // Mark image layer for redraw
@@ -173,11 +168,18 @@ static void prv_update_content_display(void) {
     text_layer_set_text(s_detail_layer, s_content.detail_text);
   }
 
-  // Update grid text
-  if (s_grid_layers[0][0]) text_layer_set_text(s_grid_layers[0][0], s_content.grid_top_left);
-  if (s_grid_layers[0][1]) text_layer_set_text(s_grid_layers[0][1], s_content.grid_top_right);
-  if (s_grid_layers[1][0]) text_layer_set_text(s_grid_layers[1][0], s_content.grid_bottom_left);
-  if (s_grid_layers[1][1]) text_layer_set_text(s_grid_layers[1][1], s_content.grid_bottom_right);
+  // Update grid text - empty for constellations
+  if (prv_is_constellation()) {
+    if (s_grid_layers[0][0]) text_layer_set_text(s_grid_layers[0][0], "");
+    if (s_grid_layers[0][1]) text_layer_set_text(s_grid_layers[0][1], "");
+    if (s_grid_layers[1][0]) text_layer_set_text(s_grid_layers[1][0], "");
+    if (s_grid_layers[1][1]) text_layer_set_text(s_grid_layers[1][1], "");
+  } else {
+    if (s_grid_layers[0][0]) text_layer_set_text(s_grid_layers[0][0], s_content.grid_top_left);
+    if (s_grid_layers[0][1]) text_layer_set_text(s_grid_layers[0][1], s_content.grid_top_right);
+    if (s_grid_layers[1][0]) text_layer_set_text(s_grid_layers[1][0], s_content.grid_bottom_left);
+    if (s_grid_layers[1][1]) text_layer_set_text(s_grid_layers[1][1], s_content.grid_bottom_right);
+  }
 
   // Update long text with altitude, azimuth, and illumination info
   if (s_long_text_layer) {
@@ -238,10 +240,19 @@ static void prv_create_grid_layers(GRect bounds, GFont font) {
   const int16_t row_height = GRID_ROW_HEIGHT;
   int16_t y = bounds.origin.y;
 
-  const char *grid_text[GRID_ROWS][GRID_COLS] = {
-      {s_content.grid_top_left, s_content.grid_top_right},
-      {s_content.grid_bottom_left, s_content.grid_bottom_right},
-  };
+  // Empty grid text for constellations
+  const char *grid_text[GRID_ROWS][GRID_COLS];
+  if (prv_is_constellation()) {
+    grid_text[0][0] = "";
+    grid_text[0][1] = "";
+    grid_text[1][0] = "";
+    grid_text[1][1] = "";
+  } else {
+    grid_text[0][0] = s_content.grid_top_left;
+    grid_text[0][1] = s_content.grid_top_right;
+    grid_text[1][0] = s_content.grid_bottom_left;
+    grid_text[1][1] = s_content.grid_bottom_right;
+  }
 
   for (int row = 0; row < GRID_ROWS; ++row) {
     int16_t x = GRID_MARGIN;
@@ -311,11 +322,15 @@ static void prv_window_load(Window *window) {
   // Hero image
   s_pdc_image = NULL;
   s_bitmap_image = NULL;
-  if (s_content.image_type == DETAILS_IMAGE_TYPE_BITMAP) {
-    s_bitmap_image = gbitmap_create_with_resource(s_content.image_resource_id);
-  } else {
-    s_pdc_image = gdraw_command_image_create_with_resource(s_content.image_resource_id);
+  // Only load image if resource_id is valid (non-zero)
+  if (s_content.image_resource_id != 0) {
+    if (s_content.image_type == DETAILS_IMAGE_TYPE_BITMAP) {
+      s_bitmap_image = gbitmap_create_with_resource(s_content.image_resource_id);
+    } else {
+      s_pdc_image = gdraw_command_image_create_with_resource(s_content.image_resource_id);
+    }
   }
+  // Use actual image size for current content
   const GSize hero_size = prv_get_image_size();
   const int16_t image_layer_height = hero_size.h + HERO_IMAGE_FRAME_PADDING;
 
@@ -344,18 +359,19 @@ static void prv_window_load(Window *window) {
     
     // Image layer dimensions (include padding for drawing)
     const int16_t image_layer_width = hero_size.w + HERO_IMAGE_FRAME_PADDING;
-    const int16_t image_layer_height = hero_size.h + HERO_IMAGE_FRAME_PADDING;
+    const int16_t image_layer_height_round = hero_size.h + HERO_IMAGE_FRAME_PADDING;
     // Position layer so that when drawing function centers image within layer, image is centered in window
     // Drawing function centers at (layer.w/2, layer.h/2) relative to layer origin
     // We want image center at (bounds.size.w/2, bounds.size.h/2)
     const int16_t image_layer_x = image_center_x - (image_layer_width / 2);
-    const int16_t image_layer_y = image_center_y - (image_layer_height / 2) - STATUS_BAR_LAYER_HEIGHT;
+    const int16_t image_layer_y = image_center_y - (image_layer_height_round / 2) - STATUS_BAR_LAYER_HEIGHT;
 
-    // Left column (RISE)
+    // Left column (RISE) - empty for constellations
     for (int row = 0; row < GRID_ROWS; ++row) {
       GRect frame = GRect(left_grid_x, grid_y + row * (grid_row_height + GRID_MARGIN), grid_column_width, grid_row_height);
       s_grid_layers[row][0] = text_layer_create(frame);
-      text_layer_set_text(s_grid_layers[row][0], row == 0 ? s_content.grid_top_left : s_content.grid_bottom_left);
+      const char *text = prv_is_constellation() ? "" : (row == 0 ? s_content.grid_top_left : s_content.grid_bottom_left);
+      text_layer_set_text(s_grid_layers[row][0], text);
       text_layer_set_background_color(s_grid_layers[row][0], GColorClear);
       text_layer_set_text_color(s_grid_layers[row][0], layout->foreground);
       text_layer_set_font(s_grid_layers[row][0], fonts_get_system_font(PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_18_BOLD)));
@@ -366,15 +382,16 @@ static void prv_window_load(Window *window) {
 
     // Image centered in window (horizontally and vertically)
     // Layer is positioned to account for padding, but image itself is perfectly centered
-    s_image_layer = layer_create(GRect(image_layer_x, image_layer_y, image_layer_width, image_layer_height));
+    s_image_layer = layer_create(GRect(image_layer_x, image_layer_y, image_layer_width, image_layer_height_round));
     layer_set_update_proc(s_image_layer, prv_draw_image);
     scroll_layer_add_child(s_scroll_layer, s_image_layer);
 
-    // Right column (SET)
+    // Right column (SET) - empty for constellations
     for (int row = 0; row < GRID_ROWS; ++row) {
       GRect frame = GRect(right_grid_x, grid_y + row * (grid_row_height + GRID_MARGIN), grid_column_width, grid_row_height);
       s_grid_layers[row][1] = text_layer_create(frame);
-      text_layer_set_text(s_grid_layers[row][1], row == 0 ? s_content.grid_top_right : s_content.grid_bottom_right);
+      const char *text = prv_is_constellation() ? "" : (row == 0 ? s_content.grid_top_right : s_content.grid_bottom_right);
+      text_layer_set_text(s_grid_layers[row][1], text);
       text_layer_set_background_color(s_grid_layers[row][1], GColorClear);
       text_layer_set_text_color(s_grid_layers[row][1], layout->foreground);
       text_layer_set_font(s_grid_layers[row][1], fonts_get_system_font(PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_18_BOLD)));
@@ -383,7 +400,7 @@ static void prv_window_load(Window *window) {
       scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][1]));
     }
 
-    y_cursor = image_layer_y + image_layer_height + HERO_IMAGE_BOTTOM_MARGIN;
+    y_cursor = image_layer_y + image_layer_height_round + HERO_IMAGE_BOTTOM_MARGIN;
   } else {
     // Non-round watch: current layout (image, detail text, then grid)
     s_image_layer = layer_create(GRect(0, y_cursor, bounds.size.w, image_layer_height));
@@ -521,7 +538,7 @@ void details_init(void) {
   bodymsg_init();
   bodymsg_register_callbacks();
   
-  s_content = s_default_content;
+  s_content = s_loading_content;
   s_is_loading = false;
   s_window = window_create();
   window_set_background_color(s_window, layout_get()->background);
@@ -558,8 +575,10 @@ void details_show(const DetailsContent *content) {
     details_init();
   }
 
+  // Check if body type is changing (regular body <-> constellation)
+  bool old_is_constellation = prv_is_constellation();
+  
   // Update content
-  s_content = s_default_content;
   if (content) {
     s_content = *content;
     s_is_loading = false;
@@ -573,10 +592,19 @@ void details_show(const DetailsContent *content) {
     APP_LOG(APP_LOG_LEVEL_INFO, "Details received body data, deregistered bodymsg callbacks");
   }
 
+  bool new_is_constellation = prv_is_constellation();
+  
   // Check if window is already visible
   bool window_visible = window_stack_contains_window(s_window);
 
-  if (window_visible) {
+  if (window_visible && old_is_constellation != new_is_constellation) {
+    // Body type changed, need to recreate window with correct layout
+    //^ does that even happen?
+    window_stack_remove(s_window, false);
+    prv_window_unload(s_window);
+    prv_window_load(s_window);
+    window_stack_push(s_window, false);
+  } else if (window_visible) {
     // Window is already visible, update the content in place
     prv_update_content_display();
   } else {
@@ -600,17 +628,16 @@ void details_show_body(int body_id) {
   if (bodymsg_request_body(body_id)) {
     // Show window with loading content
     s_content = s_loading_content;
+    // Set the body_id so layout is calculated correctly for constellations
+    s_content.body_id = body_id;
     s_is_loading = true;
     // Hide action indicator during loading
     action_indicator_set_visible(false);
     window_stack_push(s_window, true);
   } else {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to request body data for ID %d", body_id);
-    // Fallback to default content if request fails
-    s_content = s_default_content;
-    // Not loading, so show action indicator
-    action_indicator_set_visible(true);
-    window_stack_push(s_window, true);
+    // Don't show window if request fails
+    // User can try again or return to previous screen
   }
 }
 
