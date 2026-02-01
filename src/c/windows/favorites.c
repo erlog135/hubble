@@ -2,6 +2,7 @@
 #include "../style.h"
 #include "../utils/settings.h"
 #include "../utils/body_info.h"
+#include "../utils/logging.h"
 #include "./body/details.h"
 
 static Window *s_window;
@@ -41,14 +42,14 @@ static void prv_window_load(Window *window) {
 
   prv_count_favorites();
 
-  APP_LOG(APP_LOG_LEVEL_INFO, "Settings: %d", settings_get()->favorites);
-  APP_LOG(APP_LOG_LEVEL_INFO, "Favorites: %d", s_num_favorites);
+  HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Settings: %d", settings_get()->favorites);
+  HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Favorites: %d", s_num_favorites);
 
   if (s_num_favorites > 0) {
     // Create menu with favorites
     s_menu_items = malloc(sizeof(SimpleMenuItem) * s_num_favorites);
     if (!s_menu_items) {
-      APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to allocate memory for favorites menu items");
+      HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Failed to allocate memory for favorites menu items");
       return;
     }
 

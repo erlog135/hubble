@@ -2,6 +2,7 @@
 #include "../body/details.h"
 #include "../../style.h"
 #include "../../utils/bodymsg.h"
+#include "../../utils/logging.h"
 
 #define CONSTELLATION_COUNT 7
 
@@ -22,14 +23,14 @@ static SimpleMenuSection s_menu_sections[1];
 static SimpleMenuItem s_menu_items[CONSTELLATION_COUNT];
 
 static void prv_menu_select_callback(int index, void *context) {
-  APP_LOG(APP_LOG_LEVEL_INFO, "Constellation menu selected: %s (body ID: %d)",
+  HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Constellation menu selected: %s (body ID: %d)",
           s_menu_items[index].title, CONSTELLATION_BODY_IDS[index]);
 
   if (index >= 0 && index < CONSTELLATION_COUNT) {
     int body_id = CONSTELLATION_BODY_IDS[index];
     details_show_body(body_id);
   } else {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Invalid menu index: %d", index);
+    HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Invalid menu index: %d", index);
     details_show(NULL);
   }
 }

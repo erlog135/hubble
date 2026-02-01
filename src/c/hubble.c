@@ -1,10 +1,11 @@
 #include <pebble.h>
 #include "windows/home.h"
 #include "utils/settings.h"
+#include "utils/logging.h"
 
 static void prv_init(void) {
   settings_load();
-  APP_LOG(APP_LOG_LEVEL_INFO, "Settings: %d", settings.favorites);
+  HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Settings: %d", settings.favorites);
   home_init();
   home_show();
 }

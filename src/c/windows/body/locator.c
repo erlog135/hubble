@@ -4,6 +4,7 @@
 #include "../../style.h"
 #include "../../utils/settings.h"
 #include "../../utils/bodymsg.h"
+#include "../../utils/logging.h"
 #include <pebble.h>
 #include <string.h>
 
@@ -58,7 +59,7 @@ static void prv_request_declination(void) {
   AppMessageResult result = app_message_outbox_begin(&out_iter);
   
   if (result != APP_MSG_OK) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to begin outbox for declination request: %d", (int)result);
+    HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Failed to begin outbox for declination request: %d", (int)result);
     return;
   }
 
@@ -69,9 +70,9 @@ static void prv_request_declination(void) {
   result = app_message_outbox_send();
   if (result == APP_MSG_OK) {
     s_declination_requested = true;
-    APP_LOG(APP_LOG_LEVEL_INFO, "Requested magnetic declination");
+    HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Requested magnetic declination");
   } else {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to send declination request: %d", (int)result);
+    HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Failed to send declination request: %d", (int)result);
   }
 #endif
 }
@@ -92,7 +93,7 @@ static void prv_on_declination_received(int8_t declination) {
   settings->magnetic_declination = declination;
   settings_save();
   
-  APP_LOG(APP_LOG_LEVEL_INFO, "Stored magnetic declination: %d degrees", declination);
+  HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Stored magnetic declination: %d degrees", declination);
   prv_update_labels();
   
   // Trigger crosshair redraw to update target indicator position

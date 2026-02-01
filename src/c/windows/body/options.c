@@ -65,10 +65,21 @@ static void prv_on_locate(ActionMenu *menu, const ActionMenuItem *action, void *
 }
 
 static void prv_on_refresh(ActionMenu *menu, const ActionMenuItem *action, void *context) {
-  // Placeholder: no-op for now.
   (void)menu;
   (void)action;
   (void)context;
+
+  // Get current body ID
+  const DetailsContent *content = details_get_current_content();
+  if (content && content->body_id >= 0) {
+    int body_id = content->body_id;
+    
+    // Remove the details window from the stack
+    details_hide();
+    
+    // Request the body data again and show the window
+    details_show_body(body_id);
+  }
 }
 
 

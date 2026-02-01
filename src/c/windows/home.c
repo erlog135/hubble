@@ -6,6 +6,7 @@
 #include "./catalog/constellations.h"
 #include "./body/details.h"
 #include "../style.h"
+#include "../utils/logging.h"
 
 static Window *s_window;
 static SimpleMenuLayer *s_menu_layer;
@@ -23,7 +24,7 @@ static void prv_main_menu_select_callback(int index, void *context) {
       events_show();
       break;
     default:
-      APP_LOG(APP_LOG_LEVEL_INFO, "Home menu selected: %s", s_main_items[index].title);
+      HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Home menu selected: %s", s_main_items[index].title);
       vibes_short_pulse();
       break;
   }
@@ -31,7 +32,7 @@ static void prv_main_menu_select_callback(int index, void *context) {
 
 static void prv_catalog_menu_select_callback(int index, void *context) {
 
-  APP_LOG(APP_LOG_LEVEL_INFO, "Catalog menu selected: %s", s_catalog_items[index].title);
+  HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Catalog menu selected: %s", s_catalog_items[index].title);
 
   switch (index) {
     case 0:  // Moon

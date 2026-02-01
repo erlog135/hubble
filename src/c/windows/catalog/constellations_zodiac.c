@@ -2,6 +2,7 @@
 #include "../body/details.h"
 #include "../../style.h"
 #include "../../utils/bodymsg.h"
+#include "../../utils/logging.h"
 
 #define ZODIAC_COUNT 12
 
@@ -27,14 +28,14 @@ static SimpleMenuSection s_menu_sections[1];
 static SimpleMenuItem s_menu_items[ZODIAC_COUNT];
 
 static void prv_menu_select_callback(int index, void *context) {
-  APP_LOG(APP_LOG_LEVEL_INFO, "Zodiac constellation menu selected: %s (body ID: %d)",
+  HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Zodiac constellation menu selected: %s (body ID: %d)",
           s_menu_items[index].title, ZODIAC_BODY_IDS[index]);
 
   if (index >= 0 && index < ZODIAC_COUNT) {
     int body_id = ZODIAC_BODY_IDS[index];
     details_show_body(body_id);
   } else {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Invalid menu index: %d", index);
+    HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Invalid menu index: %d", index);
     details_show(NULL);
   }
 }

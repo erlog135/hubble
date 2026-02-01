@@ -398,7 +398,7 @@ function getNextLunarApsis(date) {
   return {
     time: apsis.time ? apsis.time.date : null,
     kind: apsis.kind === 0 ? 'perigee' : 'apogee', // 0 = perigee, 1 = apogee based on typical astronomy enums
-    distance: apsis.dist_au // Distance in astronomical units
+    distance: apsis.dist_km // Distance in kilometers
   };
 }
 

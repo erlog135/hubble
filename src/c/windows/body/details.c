@@ -1,6 +1,7 @@
 #include "details.h"
 #include "../../style.h"
 #include "../../utils/bodymsg.h"
+#include "../../utils/logging.h"
 #include "options.h"
 #include "action_indicator.h"
 
@@ -589,7 +590,7 @@ void details_show(const DetailsContent *content) {
     // Deregister bodymsg callbacks after successfully receiving body data
     // This allows other windows (like events) to take control of message handling
     bodymsg_deregister_callbacks();
-    APP_LOG(APP_LOG_LEVEL_INFO, "Details received body data, deregistered bodymsg callbacks");
+    HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Details received body data, deregistered bodymsg callbacks");
   }
 
   bool new_is_constellation = prv_is_constellation();
@@ -635,7 +636,7 @@ void details_show_body(int body_id) {
     action_indicator_set_visible(false);
     window_stack_push(s_window, true);
   } else {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to request body data for ID %d", body_id);
+    HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Failed to request body data for ID %d", body_id);
     // Don't show window if request fails
     // User can try again or return to previous screen
   }

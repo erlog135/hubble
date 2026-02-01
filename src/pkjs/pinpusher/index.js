@@ -242,12 +242,46 @@ function processEclipseEvents(events) {
       return;
     }
 
-    var pin = pinBuilder.buildEclipsePin(event);
-    pinCount++;
+    // For total solar eclipses with location data, add geocoded location
+    if (event.type === 'solar' && event.kind === 'total' && 
+        event.latitude !== undefined && event.longitude !== undefined) {
+      
+      // Initialize geocoder and perform reverse geocoding
+      pinBuilder.initializeGeocoder(function() {
+        var point = {
+          latitude: event.latitude,
+          longitude: event.longitude
+        };
 
-    timeline.insertUserPin(pin, function(responseText) {
-      console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
-    });
+        pinBuilder.geocoder.lookUp([point], 1, function(err, results) {
+          var bodyText = null;
+          
+          if (!err && results && results.length > 0 && results[0].length > 0) {
+            var location = results[0][0];
+            var city = location.name || 'Unknown location';
+            var country = location.countryCode || '';
+            
+            bodyText = 'At this time, ' + city + ', ' + country + ' will be in the shadow';
+          }
+          
+          var pin = pinBuilder.buildEclipsePin(event, bodyText);
+          
+          timeline.insertUserPin(pin, function(responseText) {
+            console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+          });
+        });
+      });
+      
+      pinCount++;
+    } else {
+      // For non-total solar eclipses, no geocoding needed
+      var pin = pinBuilder.buildEclipsePin(event);
+      pinCount++;
+
+      timeline.insertUserPin(pin, function(responseText) {
+        console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+      });
+    }
   });
 
   return pinCount;
