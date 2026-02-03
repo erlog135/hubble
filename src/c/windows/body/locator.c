@@ -12,6 +12,8 @@
 #define GRID_ROWS 2
 #define GRID_COLS 2
 #define GRID_ROW_HEIGHT 22
+#define CORNER_LABEL_PADDING_RECT 0
+#define CORNER_LABEL_PADDING_ROUND 20
 
 static Window *s_window;
 static Layer *s_crosshair_layer;
@@ -22,10 +24,7 @@ static StatusBarLayer *s_status_layer;
 static ActionBarLayer *s_action_bar;
 static GBitmap *s_icon_light_on;
 static GBitmap *s_icon_light_off;
-static GBitmap *s_icon_vibe_on;
-static GBitmap *s_icon_vibe_off;
 static bool s_light_enabled;
-static bool s_vibe_enabled;
 static bool s_is_calibrated;
 static bool s_declination_requested = false;
 
@@ -169,8 +168,6 @@ static void prv_update_action_icons(void) {
   }
   action_bar_layer_set_icon(s_action_bar, BUTTON_ID_UP,
                             s_light_enabled ? s_icon_light_on : s_icon_light_off);
-  action_bar_layer_set_icon(s_action_bar, BUTTON_ID_DOWN,
-                            s_vibe_enabled ? s_icon_vibe_on : s_icon_vibe_off);
 }
 
 static void prv_light_toggle_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -181,17 +178,9 @@ static void prv_light_toggle_click_handler(ClickRecognizerRef recognizer, void *
   prv_update_action_icons();
 }
 
-static void prv_vibe_toggle_click_handler(ClickRecognizerRef recognizer, void *context) {
-  (void)recognizer;
-  (void)context;
-  s_vibe_enabled = !s_vibe_enabled;
-  prv_update_action_icons();
-}
-
 static void prv_click_config_provider(void *context) {
   (void)context;
   window_single_click_subscribe(BUTTON_ID_UP, prv_light_toggle_click_handler);
-  window_single_click_subscribe(BUTTON_ID_DOWN, prv_vibe_toggle_click_handler);
 }
 
 static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
@@ -201,7 +190,6 @@ static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
 
   graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
 #if defined(PBL_COMPASS)
   // Concentric circles
@@ -290,45 +278,111 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
 
   const GRect content_bounds =
-      GRect(bounds.origin.x, bounds.origin.y + STATUS_BAR_LAYER_HEIGHT,
-           bounds.size.w - ACTION_BAR_WIDTH, bounds.size.h - STATUS_BAR_LAYER_HEIGHT);
+      GRect(bounds.origin.x, bounds.origin.y + PBL_IF_ROUND_ELSE(0, STATUS_BAR_LAYER_HEIGHT),
+           bounds.size.w - ACTION_BAR_WIDTH, bounds.size.h - PBL_IF_ROUND_ELSE(0, STATUS_BAR_LAYER_HEIGHT));
 
   const GFont header_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   const GFont value_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
 
-  const int16_t grid_height = GRID_ROW_HEIGHT * GRID_ROWS + GRID_MARGIN;
-  const int16_t top_grid_y = content_bounds.origin.y + GRID_MARGIN;
-  const int16_t bottom_grid_y =
-      content_bounds.origin.y + content_bounds.size.h - grid_height - GRID_MARGIN;
-
-  // Crosshair uses full content bounds so its scaling ignores text layout.
-  s_crosshair_layer = layer_create(content_bounds);
+  // Crosshair layer vertically centered in the full screen
+  // Height accounts for status bar, and positioned so visual center is at bounds.size.h / 2 - STATUS_BAR_LAYER_HEIGHT / 2
+  const int16_t crosshair_height = bounds.size.h - STATUS_BAR_LAYER_HEIGHT;
+  const int16_t crosshair_y = bounds.origin.y + (bounds.size.h - crosshair_height) / 2;
+  const GRect crosshair_bounds = GRect(content_bounds.origin.x, 
+                                       crosshair_y,
+                                       content_bounds.size.w, 
+                                       crosshair_height);
+  s_crosshair_layer = layer_create(crosshair_bounds);
   layer_set_update_proc(s_crosshair_layer, prv_draw_crosshair);
   layer_add_child(window_layer, s_crosshair_layer);
 
-  const char *target_text[GRID_ROWS][GRID_COLS] = {
-      {"Alt", "Az"},
-      {"", ""},
-  };
-  const GRect target_grid_frame =
-      GRect(content_bounds.origin.x, top_grid_y, content_bounds.size.w, grid_height);
-  prv_create_grid(s_target_grid, window_layer, target_grid_frame, target_text, header_font,
-                  value_font, layout->foreground);
-
-  const char *current_text[GRID_ROWS][GRID_COLS] = {
-      {"My Alt",
+  // Use corner-based layout with edge padding
+  const int16_t padding = PBL_IF_ROUND_ELSE(CORNER_LABEL_PADDING_ROUND, CORNER_LABEL_PADDING_RECT);
+  char *font_key = PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_14, FONT_KEY_GOTHIC_18);
+  const int16_t label_width = content_bounds.size.w / 2;
+  const int16_t label_height = PBL_IF_ROUND_ELSE(18, 21);
+  const GFont corner_font = fonts_get_system_font(font_key);
+  
+  // Top-left corner: "Alt" label and value
+  const int16_t tl_x = content_bounds.origin.x + padding;
+  const int16_t tl_y = content_bounds.origin.y + padding;
+  s_target_grid[0][0] = text_layer_create(GRect(tl_x, tl_y, label_width, label_height));
+  text_layer_set_text(s_target_grid[0][0], "Alt");
+  text_layer_set_background_color(s_target_grid[0][0], GColorClear);
+  text_layer_set_text_color(s_target_grid[0][0], layout->foreground);
+  text_layer_set_font(s_target_grid[0][0], corner_font);
+  text_layer_set_text_alignment(s_target_grid[0][0], GTextAlignmentCenter); 
+  layer_add_child(window_layer, text_layer_get_layer(s_target_grid[0][0]));
+  
+  s_target_grid[1][0] = text_layer_create(GRect(tl_x, tl_y + label_height, label_width, label_height));
+  text_layer_set_text(s_target_grid[1][0], "");
+  text_layer_set_background_color(s_target_grid[1][0], GColorClear);
+  text_layer_set_text_color(s_target_grid[1][0], layout->foreground);
+  text_layer_set_font(s_target_grid[1][0], corner_font);
+  text_layer_set_text_alignment(s_target_grid[1][0], GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(s_target_grid[1][0]));
+  
+  // Top-right corner: "Az" label and value
+  const int16_t tr_x = content_bounds.origin.x + content_bounds.size.w - padding - label_width;
+  const int16_t tr_y = content_bounds.origin.y + padding;
+  s_target_grid[0][1] = text_layer_create(GRect(tr_x, tr_y, label_width, label_height));
+  text_layer_set_text(s_target_grid[0][1], "Az");
+  text_layer_set_background_color(s_target_grid[0][1], GColorClear);
+  text_layer_set_text_color(s_target_grid[0][1], layout->foreground);
+  text_layer_set_font(s_target_grid[0][1], corner_font);
+  text_layer_set_text_alignment(s_target_grid[0][1], GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(s_target_grid[0][1]));
+  
+  s_target_grid[1][1] = text_layer_create(GRect(tr_x, tr_y + label_height, label_width, label_height));
+  text_layer_set_text(s_target_grid[1][1], "");
+  text_layer_set_background_color(s_target_grid[1][1], GColorClear);
+  text_layer_set_text_color(s_target_grid[1][1], layout->foreground);
+  text_layer_set_font(s_target_grid[1][1], corner_font);
+  text_layer_set_text_alignment(s_target_grid[1][1], GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(s_target_grid[1][1]));
+  
+  // Bottom-left corner: "My Alt" label and value
+  const int16_t bl_x = content_bounds.origin.x + padding;
+  const int16_t bl_y = content_bounds.origin.y + content_bounds.size.h - padding - (label_height * 2);
+  s_current_grid[0][0] = text_layer_create(GRect(bl_x, bl_y, label_width, label_height));
+  text_layer_set_text(s_current_grid[0][0], "My Alt");
+  text_layer_set_background_color(s_current_grid[0][0], GColorBlack);
+  text_layer_set_text_color(s_current_grid[0][0], layout->foreground);
+  text_layer_set_font(s_current_grid[0][0], corner_font);
+  text_layer_set_text_alignment(s_current_grid[0][0], GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(s_current_grid[0][0]));
+  
+  s_current_grid[1][0] = text_layer_create(GRect(bl_x, bl_y + label_height, label_width, label_height));
+  text_layer_set_text(s_current_grid[1][0], "");
+  text_layer_set_background_color(s_current_grid[1][0], GColorClear);
+  text_layer_set_text_color(s_current_grid[1][0], layout->foreground);
+  text_layer_set_font(s_current_grid[1][0], corner_font);
+  text_layer_set_text_alignment(s_current_grid[1][0], GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(s_current_grid[1][0]));
+  
+  // Bottom-right corner: "My Az" label and value (compass only)
 #if defined(PBL_COMPASS)
-       "My Az"
+  const int16_t br_x = content_bounds.origin.x + content_bounds.size.w - padding - label_width;
+  const int16_t br_y = content_bounds.origin.y + content_bounds.size.h - padding - (label_height * 2);
+  s_current_grid[0][1] = text_layer_create(GRect(br_x, br_y, label_width, label_height));
+  text_layer_set_text(s_current_grid[0][1], "My Az");
+  text_layer_set_background_color(s_current_grid[0][1], GColorClear);
+  text_layer_set_text_color(s_current_grid[0][1], layout->foreground);
+  text_layer_set_font(s_current_grid[0][1], corner_font);
+  text_layer_set_text_alignment(s_current_grid[0][1], GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(s_current_grid[0][1]));
+  
+  s_current_grid[1][1] = text_layer_create(GRect(br_x, br_y + label_height, label_width, label_height));
+  text_layer_set_text(s_current_grid[1][1], "");
+  text_layer_set_background_color(s_current_grid[1][1], GColorClear);
+  text_layer_set_text_color(s_current_grid[1][1], layout->foreground);
+  text_layer_set_font(s_current_grid[1][1], corner_font);
+  text_layer_set_text_alignment(s_current_grid[1][1], GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(s_current_grid[1][1]));
 #else
-       ""
+  s_current_grid[0][1] = NULL;
+  s_current_grid[1][1] = NULL;
 #endif
-      },
-      {"", ""},
-  };
-  const GRect current_grid_frame =
-      GRect(content_bounds.origin.x, bottom_grid_y, content_bounds.size.w, grid_height);
-  prv_create_grid(s_current_grid, window_layer, current_grid_frame, current_text, header_font,
-                  value_font, layout->foreground);
 
   // Calibration message layer (shown when compass needs calibration)
   s_calibration_layer = text_layer_create(content_bounds);
@@ -341,11 +395,8 @@ static void prv_window_load(Window *window) {
 
   // Action bar on the right edge.
   s_light_enabled = false;
-  s_vibe_enabled = false;
   s_icon_light_on = gbitmap_create_with_resource(RESOURCE_ID_ACTION_LIGHT_ON);
   s_icon_light_off = gbitmap_create_with_resource(RESOURCE_ID_ACTION_LIGHT_OFF);
-  s_icon_vibe_on = gbitmap_create_with_resource(RESOURCE_ID_ACTION_VIBRATE_ENABLE);
-  s_icon_vibe_off = gbitmap_create_with_resource(RESOURCE_ID_ACTION_VIBRATE_DISABLE);
 
   s_action_bar = action_bar_layer_create();
   action_bar_layer_set_click_config_provider(s_action_bar, prv_click_config_provider);
@@ -364,6 +415,10 @@ static void prv_window_load(Window *window) {
   
   // Request magnetic declination from JavaScript
   prv_request_declination();
+#else
+  // On non-compass watches, hide calibration message and show crosshair
+  layer_set_hidden(text_layer_get_layer(s_calibration_layer), true);
+  layer_set_hidden(s_crosshair_layer, false);
 #endif
 }
 
@@ -401,14 +456,6 @@ static void prv_window_unload(Window *window) {
   if (s_icon_light_off) {
     gbitmap_destroy(s_icon_light_off);
     s_icon_light_off = NULL;
-  }
-  if (s_icon_vibe_on) {
-    gbitmap_destroy(s_icon_vibe_on);
-    s_icon_vibe_on = NULL;
-  }
-  if (s_icon_vibe_off) {
-    gbitmap_destroy(s_icon_vibe_off);
-    s_icon_vibe_off = NULL;
   }
   layer_destroy(s_crosshair_layer);
   s_crosshair_layer = NULL;

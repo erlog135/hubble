@@ -6,23 +6,6 @@ var constants = require('./constants');
 var PIN_IDS = constants.PIN_IDS;
 var EVENT_STYLES = constants.EVENT_STYLES;
 
-// Initialize geocoder
-var geocoder = require('local-reverse-geocoder');
-var geocoderInitialized = false;
-
-// Initialize the geocoder (lazy loading)
-function initializeGeocoder(callback) {
-  if (geocoderInitialized) {
-    callback();
-    return;
-  }
-  
-  geocoder.init({}, function() {
-    geocoderInitialized = true;
-    callback();
-  });
-}
-
 /**
  * Capitalize the first letter of a string
  * @param {string} str - The string to capitalize
@@ -326,34 +309,26 @@ function buildTransitPin(event) {
 /**
  * Build an eclipse event pin
  * @param {Object} event - The eclipse event
- * @param {string} bodyText - Optional body text (e.g., location for total solar eclipses)
  * @returns {Object} Complete pin object
  */
-function buildEclipsePin(event, bodyText) {
+function buildEclipsePin(event) {
   var style = EVENT_STYLES.eclipse;
 
   var title = capitalizeFirst(event.kind) + ' ' + event.type + ' Eclipse';
   var pinId = generateEventPinId(event, 'eclipse');
 
-  var layout = {
-    type: "genericPin",
-    primaryColor: style.foregroundColor,
-    secondaryColor: style.foregroundColor,
-    backgroundColor: style.backgroundColor,
-    title: title,
-    tinyIcon: "system://images/" + style.tinyIcon,
-    lastUpdated: generateTimestamp()
-  };
-
-  // Add body text if provided
-  if (bodyText) {
-    layout.body = bodyText;
-  }
-
   return {
     id: pinId,
     time: event.peak.toISOString(),
-    layout: layout,
+    layout: {
+      type: "genericPin",
+      primaryColor: style.foregroundColor,
+      secondaryColor: style.foregroundColor,
+      backgroundColor: style.backgroundColor,
+      title: title,
+      tinyIcon: "system://images/" + style.tinyIcon,
+      lastUpdated: generateTimestamp()
+    },
     actions: generatePinActions(event, 'eclipse')
   };
 }
@@ -426,7 +401,5 @@ module.exports = {
   buildLunarApsisPin: buildLunarApsisPin,
   generateEventPinId: generateEventPinId,
   capitalizeFirst: capitalizeFirst,
-  generateTimestamp: generateTimestamp,
-  initializeGeocoder: initializeGeocoder,
-  geocoder: geocoder
+  generateTimestamp: generateTimestamp
 };

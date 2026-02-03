@@ -9,6 +9,7 @@
 #define CONSTELLATION_IMAGE_SIZE 80
 #define CONSTELLATION_BODY_ID_START 10
 #define GRID_MARGIN 4
+#define GRID_ROUND_SIDE_PADDING 8
 #define GRID_ROWS 2
 #define GRID_COLS 2
 #define GRID_ROW_HEIGHT 18
@@ -345,12 +346,12 @@ static void prv_window_load(Window *window) {
     const int16_t image_start_x = image_center_x - (hero_size.w / 2);
     
     // Calculate available space on each side of the centered image
-    const int16_t left_space = image_start_x;
-    const int16_t right_space = bounds.size.w - (image_start_x + hero_size.w);
+    const int16_t left_space = image_start_x - GRID_ROUND_SIDE_PADDING;
+    const int16_t right_space = bounds.size.w - (image_start_x + hero_size.w) - GRID_ROUND_SIDE_PADDING;
     const int16_t grid_column_width = (left_space < right_space ? left_space : right_space) - GRID_MARGIN;
     
     // Position grid columns on either side of the centered image
-    const int16_t left_grid_x = GRID_MARGIN;
+    const int16_t left_grid_x = GRID_ROUND_SIDE_PADDING;
     const int16_t right_grid_x = image_start_x + hero_size.w + GRID_MARGIN;
     
     // Center the image vertically in the full window using raw image dimensions
