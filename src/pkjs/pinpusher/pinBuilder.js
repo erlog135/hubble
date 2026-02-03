@@ -317,7 +317,7 @@ function buildEclipsePin(event) {
   var title = capitalizeFirst(event.kind) + ' ' + event.type + ' Eclipse';
   var pinId = generateEventPinId(event, 'eclipse');
 
-  return {
+  var pin = {
     id: pinId,
     time: event.peak.toISOString(),
     layout: {
@@ -331,6 +331,18 @@ function buildEclipsePin(event) {
     },
     actions: generatePinActions(event, 'eclipse')
   };
+
+  // Add location info for total solar eclipses
+  if (event.type === 'solar' && event.kind === 'total' && event.latitude !== undefined && event.longitude !== undefined) {
+    var latDir = event.latitude >= 0 ? 'N' : 'S';
+    var lonDir = event.longitude >= 0 ? 'E' : 'W';
+    var latAbs = Math.abs(event.latitude).toFixed(2);
+    var lonAbs = Math.abs(event.longitude).toFixed(2);
+    
+    pin.layout.body = 'At peak time, the shadow will fall over: ' + latAbs + '° ' + latDir + ', ' + lonAbs + '° ' + lonDir;
+  }
+
+  return pin;
 }
 
 /**

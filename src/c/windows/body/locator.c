@@ -389,7 +389,7 @@ static void prv_window_load(Window *window) {
   text_layer_set_background_color(s_calibration_layer, GColorBlack);
   text_layer_set_text_color(s_calibration_layer, GColorWhite);
   text_layer_set_font(s_calibration_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text(s_calibration_layer, "Do a figure-8\nwith your watch\nto calibrate");
+  text_layer_set_text(s_calibration_layer, "\n\nDo a figure-8\nwith your watch\nto calibrate");
   text_layer_set_text_alignment(s_calibration_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(s_calibration_layer));
 

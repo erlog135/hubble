@@ -18,7 +18,7 @@ typedef struct {
   const char *grid_top_right;
   const char *grid_bottom_left;
   const char *grid_bottom_right;
-  char long_text[512];  // Buffer for dynamically formatted long text
+  char long_text[128];  // Buffer for dynamically formatted long text
   uint32_t image_resource_id;  // RESOURCE_ID_*
   DetailsImageType image_type;
   int16_t azimuth_deg;  // Azimuth in degrees (0-360)

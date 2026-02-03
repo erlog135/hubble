@@ -15,7 +15,7 @@ static void prv_outbox_failed_callback(DictionaryIterator *iter, AppMessageResul
 static void prv_request_events_refresh(void) {
   if (!bodymsg_is_ready()) {
     HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "AppMessage not ready for events refresh");
-    text_layer_set_text(s_text_layer, "Connection Error");
+    text_layer_set_text(s_text_layer, "\n\n\nConnection Error");
     return;
   }
 
@@ -25,7 +25,7 @@ static void prv_request_events_refresh(void) {
 
   if (result != APP_MSG_OK) {
     HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Error preparing outbox: %d", (int)result);
-    text_layer_set_text(s_text_layer, "Send Error");
+    text_layer_set_text(s_text_layer, "\n\n\nSend Error");
     return;
   }
 
@@ -37,12 +37,12 @@ static void prv_request_events_refresh(void) {
   result = app_message_outbox_send();
   if (result != APP_MSG_OK) {
     HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Error sending request: %d", (int)result);
-    text_layer_set_text(s_text_layer, "Send Error");
+    text_layer_set_text(s_text_layer, "\n\n\nSend Error");
     return;
   }
 
   s_refresh_pending = true;
-  text_layer_set_text(s_text_layer, "Refreshing...");
+  text_layer_set_text(s_text_layer, "\n\n\nRefreshing...");
   HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Requested events refresh");
 }
 
@@ -56,7 +56,7 @@ static void prv_window_load(Window *window) {
   s_text_layer = text_layer_create(bounds);
   text_layer_set_background_color(s_text_layer, layout->background);
   text_layer_set_text_color(s_text_layer, layout->foreground);
-  text_layer_set_text(s_text_layer, "Events");
+  text_layer_set_text(s_text_layer, "\n\n\nEvents");
   text_layer_set_font(s_text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(s_text_layer, GTextAlignmentCenter);
 
@@ -77,13 +77,13 @@ static void prv_inbox_received_callback(DictionaryIterator *iter, void *context)
 
     if (event_count >= 0) {
       // Success - show count
-      static char buffer[32];
-      snprintf(buffer, sizeof(buffer), "Refreshed %d events", (int)event_count);
+      static char buffer[64];
+      snprintf(buffer, sizeof(buffer), "\n\n\nRefreshed %d events", (int)event_count);
       text_layer_set_text(s_text_layer, buffer);
       HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Events refresh completed: %d events", (int)event_count);
     } else {
       // Error
-      text_layer_set_text(s_text_layer, "Refresh Failed");
+      text_layer_set_text(s_text_layer, "\n\n\nRefresh Failed");
       HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Events refresh failed");
     }
   }
@@ -93,7 +93,7 @@ static void prv_inbox_dropped_callback(AppMessageResult reason, void *context) {
   HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Events message dropped. Reason: %d", (int)reason);
   if (s_refresh_pending) {
     s_refresh_pending = false;
-    text_layer_set_text(s_text_layer, "Message Error");
+    text_layer_set_text(s_text_layer, "\n\n\nMessage Error");
   }
 }
 
@@ -101,7 +101,7 @@ static void prv_outbox_failed_callback(DictionaryIterator *iter, AppMessageResul
   HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Events message send failed. Reason: %d", (int)reason);
   if (s_refresh_pending) {
     s_refresh_pending = false;
-    text_layer_set_text(s_text_layer, "Send Failed");
+    text_layer_set_text(s_text_layer, "\n\n\nSend Failed");
   }
 }
 

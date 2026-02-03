@@ -153,7 +153,6 @@ Pebble.addEventListener('ready', function() {
         ' (index ' + phaseIndex + ')');
       });
       
-      
 
 
 });

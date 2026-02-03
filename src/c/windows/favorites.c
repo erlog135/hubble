@@ -83,7 +83,7 @@ static void prv_window_load(Window *window) {
     const GRect text_frame = GRect(bounds.origin.x + 10, bounds.origin.y + 10,
                                    bounds.size.w - 20, bounds.size.h - 20);
     s_text_layer = text_layer_create(text_frame);
-    text_layer_set_text(s_text_layer, "No favorites yet");
+    text_layer_set_text(s_text_layer, "\n\n\nNo favorites yet");
     text_layer_set_text_color(s_text_layer, layout->foreground);
     text_layer_set_background_color(s_text_layer, layout->background);
     text_layer_set_text_alignment(s_text_layer, GTextAlignmentCenter);

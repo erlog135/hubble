@@ -12,13 +12,31 @@
 #define GRID_ROUND_SIDE_PADDING 8
 #define GRID_ROWS 2
 #define GRID_COLS 2
-#define GRID_ROW_HEIGHT 18
+
+#ifdef PBL_PLATFORM_EMERY
+  #define FONT_HEIGHT 28
+#else
+  #define FONT_HEIGHT 21
+#endif
+
+#define GRID_ROW_HEIGHT FONT_HEIGHT
+
 #define TITLE_TOP_MARGIN 0
 #define TITLE_BOTTOM_MARGIN 4
 #define HERO_IMAGE_FRAME_PADDING 6
 #define HERO_IMAGE_BOTTOM_MARGIN 2
 #define DETAIL_BOTTOM_MARGIN 2
 #define LONG_TEXT_TOP_MARGIN 8
+
+#ifdef PBL_PLATFORM_EMERY
+  char *title_font_key = FONT_KEY_GOTHIC_24_BOLD;
+  char *grid_font_key = FONT_KEY_GOTHIC_24_BOLD;
+  char *detail_font_key = FONT_KEY_GOTHIC_24;
+#else
+  char *title_font_key = FONT_KEY_GOTHIC_18_BOLD;
+  char *grid_font_key = PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_18_BOLD);
+  char *detail_font_key = FONT_KEY_GOTHIC_18;
+#endif
 
 static Window *s_window;
 static ScrollLayer *s_scroll_layer;
@@ -308,14 +326,13 @@ static void prv_window_load(Window *window) {
   // Title
   const int16_t side_margin = GRID_MARGIN;
   int16_t y_cursor = TITLE_TOP_MARGIN;
-  const GFont title_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   GRect title_frame =
-      GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 21);
+      GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, GRID_ROW_HEIGHT);
   s_title_layer = text_layer_create(title_frame);
   text_layer_set_text(s_title_layer, s_content.title_text);
   text_layer_set_background_color(s_title_layer, GColorClear);
   text_layer_set_text_color(s_title_layer, layout->foreground);
-  text_layer_set_font(s_title_layer, title_font);
+  text_layer_set_font(s_title_layer, fonts_get_system_font(title_font_key));
   text_layer_set_text_alignment(s_title_layer, GTextAlignmentCenter);
   scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_title_layer));
 
@@ -376,7 +393,7 @@ static void prv_window_load(Window *window) {
       text_layer_set_text(s_grid_layers[row][0], text);
       text_layer_set_background_color(s_grid_layers[row][0], GColorClear);
       text_layer_set_text_color(s_grid_layers[row][0], layout->foreground);
-      text_layer_set_font(s_grid_layers[row][0], fonts_get_system_font(PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_18_BOLD)));
+      text_layer_set_font(s_grid_layers[row][0], fonts_get_system_font(grid_font_key));
       text_layer_set_overflow_mode(s_grid_layers[row][0], GTextOverflowModeWordWrap);
       text_layer_set_text_alignment(s_grid_layers[row][0], GTextAlignmentCenter);
       scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][0]));
@@ -396,7 +413,7 @@ static void prv_window_load(Window *window) {
       text_layer_set_text(s_grid_layers[row][1], text);
       text_layer_set_background_color(s_grid_layers[row][1], GColorClear);
       text_layer_set_text_color(s_grid_layers[row][1], layout->foreground);
-      text_layer_set_font(s_grid_layers[row][1], fonts_get_system_font(PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_18_BOLD)));
+      text_layer_set_font(s_grid_layers[row][1], fonts_get_system_font(grid_font_key));
       text_layer_set_overflow_mode(s_grid_layers[row][1], GTextOverflowModeWordWrap);
       text_layer_set_text_alignment(s_grid_layers[row][1], GTextAlignmentCenter);
       scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][1]));
@@ -411,13 +428,12 @@ static void prv_window_load(Window *window) {
     y_cursor += image_layer_height + HERO_IMAGE_BOTTOM_MARGIN;
 
     // Detail text
-    const GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
-    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 21);
+    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, GRID_ROW_HEIGHT);
     s_detail_layer = text_layer_create(detail_frame);
     text_layer_set_text(s_detail_layer, s_content.detail_text);
     text_layer_set_background_color(s_detail_layer, GColorClear);
     text_layer_set_text_color(s_detail_layer, layout->foreground);
-    text_layer_set_font(s_detail_layer, detail_font);
+    text_layer_set_font(s_detail_layer, fonts_get_system_font(detail_font_key));
     text_layer_set_overflow_mode(s_detail_layer, GTextOverflowModeWordWrap);
     text_layer_set_text_alignment(s_detail_layer, GTextAlignmentCenter);
     scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_detail_layer));
@@ -427,51 +443,47 @@ static void prv_window_load(Window *window) {
     // Grid values (2x2)
     const GRect grid_bounds =
         GRect(0, y_cursor, bounds.size.w, GRID_ROW_HEIGHT * GRID_ROWS + GRID_MARGIN);
-    prv_create_grid_layers(grid_bounds, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+    prv_create_grid_layers(grid_bounds, fonts_get_system_font(grid_font_key));
     y_cursor += grid_bounds.size.h;
   }
 
   // Detail text (for round watches, placed after image)
   if (PBL_IF_ROUND_ELSE(1, 0)) {
-    const GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
     GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 21);
     s_detail_layer = text_layer_create(detail_frame);
     text_layer_set_text(s_detail_layer, s_content.detail_text);
     text_layer_set_background_color(s_detail_layer, GColorClear);
     text_layer_set_text_color(s_detail_layer, layout->foreground);
-    text_layer_set_font(s_detail_layer, detail_font);
+    text_layer_set_font(s_detail_layer, fonts_get_system_font(detail_font_key));
     text_layer_set_overflow_mode(s_detail_layer, GTextOverflowModeWordWrap);
     text_layer_set_text_alignment(s_detail_layer, GTextAlignmentCenter);
     scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_detail_layer));
 
     y_cursor += detail_frame.size.h + DETAIL_BOTTOM_MARGIN;
+  }
 
-    // Adjust spacing so first page ends at exactly scroll_bounds.size.h
-    // The scrollable area height is bounds.size.h - STATUS_BAR_LAYER_HEIGHT
-    const int16_t scroll_height = bounds.size.h - STATUS_BAR_LAYER_HEIGHT;
-    const int16_t min_spacing = LONG_TEXT_TOP_MARGIN;
-    const int16_t target_y = scroll_height;
-    
-    if (y_cursor + min_spacing <= target_y) {
-      // Can fit minimum spacing and reach target height
-      y_cursor = target_y;
-    } else {
-      // Content too tall, use minimum spacing
-      y_cursor += min_spacing;
-    }
+  // Adjust spacing so first page ends at exactly scroll_bounds.size.h
+  // The scrollable area height is bounds.size.h - STATUS_BAR_LAYER_HEIGHT
+  const int16_t scroll_height = bounds.size.h - STATUS_BAR_LAYER_HEIGHT;
+  const int16_t min_spacing = LONG_TEXT_TOP_MARGIN;
+  const int16_t target_y = scroll_height;
+  
+  if (y_cursor + min_spacing <= target_y) {
+    // Can fit minimum spacing and reach target height
+    y_cursor = target_y;
   } else {
-    y_cursor += LONG_TEXT_TOP_MARGIN;
+    // Content too tall, use minimum spacing
+    y_cursor += min_spacing;
   }
 
   // Long-form text after the first "page"
-  const GFont long_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
   GRect long_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, bounds.size.h);
 
   s_long_text_layer = text_layer_create(long_frame);
   text_layer_set_text(s_long_text_layer, s_content.long_text);
   text_layer_set_background_color(s_long_text_layer, GColorClear);
   text_layer_set_text_color(s_long_text_layer, layout->foreground);
-  text_layer_set_font(s_long_text_layer, long_font);
+  text_layer_set_font(s_long_text_layer, fonts_get_system_font(detail_font_key));
   text_layer_set_overflow_mode(s_long_text_layer, GTextOverflowModeWordWrap);
   text_layer_set_text_alignment(s_long_text_layer, PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentLeft));
   scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_long_text_layer));
