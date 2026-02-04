@@ -1,5 +1,5 @@
 # Hubble
-An astronomy app for Pebble. This app uses [Astronomy Engine](https://github.com/cosinekitty/astronomy) and [geomagnetism](https://github.com/naturalatlas/geomagnetism) for functionality on the PebbleKit JS side.
+An astronomy app for Pebble. This app was developed in the Cursor editor, and uses [Astronomy Engine](https://github.com/cosinekitty/astronomy) and [geomagnetism](https://github.com/naturalatlas/geomagnetism) for functionality on the PebbleKit JS side.
 
 ### Features
 - Displays azimuth and altitude of the sun, moon, planets, and various constellations (plus rise/set time, phase, and illumination if applicable).
