@@ -155,23 +155,25 @@ function generatePinActions(event, category) {
   var bodyId = getBodyId(event, category);
   var bodyName = getBodyName(event, category);
 
-  return [
-    {
-      "title": bodyName + " Details",
-      "type": "openWatchApp",
-      "launchCode": 200 + bodyId
-    },
-    {
-      "title": "Open Hubble",
-      "type": "openWatchApp",
-      "launchCode": 100
-    },
-    {
-      "title": "Refresh events",
-      "type": "openWatchApp",
-      "launchCode": 101
-    }
-  ];
+  return [];
+  //TODO: wait until I can test this
+  // return [
+  //   {
+  //     "title": bodyName + " Details",
+  //     "type": "openWatchApp",
+  //     "launchCode": 200 + bodyId
+  //   },
+  //   {
+  //     "title": "Open Hubble",
+  //     "type": "openWatchApp",
+  //     "launchCode": 100
+  //   },
+  //   {
+  //     "title": "Refresh events",
+  //     "type": "openWatchApp",
+  //     "launchCode": 101
+  //   }
+  // ];
 }
 
 /**

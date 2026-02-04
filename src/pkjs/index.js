@@ -131,7 +131,7 @@ Pebble.addEventListener('ready', function() {
   }
   console.log('Current clay settings:', JSON.stringify(claySettings));
 
-  PinPusher.pushTestPin();
+  // PinPusher.pushTestPin();
   // PinPusher.deleteTestPin();
 
   Observer.initObserver().then(function(observer) {
@@ -139,18 +139,10 @@ Pebble.addEventListener('ready', function() {
     console.log('Observer ready (lat=' + observer.latitude +
       ', lon=' + observer.longitude + ', h=' + observer.height + ')');
 
-      // Body request handler is now registered dynamically in the appmessage listener
-      console.log('Body request handler ready');
-
-      // Calculate and send magnetic declination
-      var declination = Declination.getMagneticDeclination(activeObserver);
-      //Declination.sendMagneticDeclination(declination);
+     
     }).catch(function(err) {
       console.log('Proceeding without observer: ' + err.message);
-      var phaseIndex = Events.getMoonPhase(new Date());
-      var phaseName = Events.getMoonPhaseName(new Date());
-      console.log('Current Moon Phase: ' + phaseName +
-        ' (index ' + phaseIndex + ')');
+
       });
       
 
