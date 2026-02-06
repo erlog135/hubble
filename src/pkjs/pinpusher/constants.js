@@ -110,7 +110,7 @@ var EVENT_STYLES = {
   },
   bodySet: {
     foregroundColor: "#FFFFFF",
-    backgroundColor: "#550000",
+    backgroundColor: "#555500",
     tinyIcon: "NOTIFICATION_FLAG"
   },
   moonRise: {
@@ -125,32 +125,32 @@ var EVENT_STYLES = {
   },
   astronomicalDawn: {
     foregroundColor: "#FFFFFF",
-    backgroundColor: "#AA0055",
+    backgroundColor: "#AA00AA",
     tinyIcon: "GENERIC_CONFIRMATION"
   },
   astronomicalDusk: {
     foregroundColor: "#FFFFFF",
-    backgroundColor: "#AA0055",
+    backgroundColor: "#AA00AA",
     tinyIcon: "GENERIC_CONFIRMATION"
   },
   nauticalDawn: {
     foregroundColor: "#FFFFFF",
-    backgroundColor: "#FF0055",
+    backgroundColor: "#AA00FF",
     tinyIcon: "NOTIFICATION_LIGHTHOUSE"
   },
   nauticalDusk: {
     foregroundColor: "#FFFFFF",
-    backgroundColor: "#FF0055",
+    backgroundColor: "#AA00FF",
     tinyIcon: "NOTIFICATION_LIGHTHOUSE"
   },
   civilDawn: {
     foregroundColor: "#000000",
-    backgroundColor: "#FF5555",
+    backgroundColor: "#AA55FF",
     tinyIcon: "NOTIFICATION_GENERIC"
   },
   civilDusk: {
     foregroundColor: "#000000",
-    backgroundColor: "#FF5555",
+    backgroundColor: "#AA55FF",
     tinyIcon: "NOTIFICATION_GENERIC"
   },
   solarNoon: {
@@ -159,8 +159,8 @@ var EVENT_STYLES = {
     tinyIcon: "TIMELINE_SUN"
   },
   solarMidnight: {
-    foregroundColor: "#FFFFFF",
-    backgroundColor: "#000055",
+    foregroundColor: "#000000",
+    backgroundColor: "#AAAA55",
     tinyIcon: "TIMELINE_SUN"
   },
   equinox: {

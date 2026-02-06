@@ -8,25 +8,25 @@
 #define HERO_IMAGE_SIZE 50
 #define CONSTELLATION_IMAGE_SIZE 80
 #define CONSTELLATION_BODY_ID_START 10
-#define GRID_MARGIN 4
+#define GRID_MARGIN 0
 #define GRID_ROUND_SIDE_PADDING 8
 #define GRID_ROWS 2
 #define GRID_COLS 2
 
 #ifdef PBL_PLATFORM_EMERY
   #define FONT_HEIGHT 28
+  #define GRID_ROW_HEIGHT 24
 #else
   #define FONT_HEIGHT 21
+  #define GRID_ROW_HEIGHT PBL_IF_ROUND_ELSE(18, 14)
 #endif
-
-#define GRID_ROW_HEIGHT FONT_HEIGHT
 
 #define TITLE_TOP_MARGIN 0
 #define TITLE_BOTTOM_MARGIN 4
 #define HERO_IMAGE_FRAME_PADDING 6
-#define HERO_IMAGE_BOTTOM_MARGIN 2
-#define DETAIL_BOTTOM_MARGIN 2
-#define LONG_TEXT_TOP_MARGIN 8
+#define HERO_IMAGE_BOTTOM_MARGIN 0
+#define DETAIL_BOTTOM_MARGIN 0
+#define LONG_TEXT_TOP_MARGIN 4
 
 #ifdef PBL_PLATFORM_EMERY
   char *title_font_key = FONT_KEY_GOTHIC_24_BOLD;
@@ -34,7 +34,7 @@
   char *detail_font_key = FONT_KEY_GOTHIC_24;
 #else
   char *title_font_key = FONT_KEY_GOTHIC_18_BOLD;
-  char *grid_font_key = PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_18_BOLD);
+  char *grid_font_key = PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_14_BOLD);
   char *detail_font_key = FONT_KEY_GOTHIC_18;
 #endif
 
@@ -49,6 +49,8 @@ static GDrawCommandImage *s_pdc_image;
 static GBitmap *s_bitmap_image;
 static StatusBarLayer *s_status_layer;
 static Layer *s_action_indicator_layer;
+static Layer *s_content_indicator_layer;
+static ContentIndicator *s_content_indicator;
 
 static int16_t s_page_height;
 static DetailsContent s_content;
@@ -217,6 +219,26 @@ static void prv_update_content_display(void) {
   }
 }
 
+static void prv_draw_content_indicator_background(Layer *layer, GContext *ctx) {
+  const GRect bounds = layer_get_bounds(layer);
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx, bounds, 0, GCornerNone);
+}
+
+static void prv_content_offset_changed_handler(ScrollLayer *scroll_layer, void *context) {
+  if (!s_content_indicator) {
+    return;
+  }
+  
+  const GPoint offset = scroll_layer_get_content_offset(scroll_layer);
+  // Only show indicator when scrolled to the very top (offset.y == 0)
+  //except no it doesn't it shows it all the time until it's at the very bottom
+  const bool at_top = (offset.y == 0);
+  content_indicator_set_content_available(s_content_indicator, ContentIndicatorDirectionDown, at_top);
+  //so i conditionally hide it again, for real
+  layer_set_hidden(s_content_indicator_layer, !at_top);
+}
+
 static void prv_select_click_handler(ClickRecognizerRef recognizer, void *context) {
   if (!prv_is_loading()) {
     options_menu_show();
@@ -319,15 +341,42 @@ static void prv_window_load(Window *window) {
       s_scroll_layer,
       (ScrollLayerCallbacks){
           .click_config_provider = prv_click_config_provider,
+          .content_offset_changed_handler = prv_content_offset_changed_handler,
       });
   scroll_layer_set_click_config_onto_window(s_scroll_layer, window);
   scroll_layer_set_paging(s_scroll_layer, true);
+
+  // Set up content indicator
+  s_content_indicator = scroll_layer_get_content_indicator(s_scroll_layer);
+  
+  // Create a layer for the indicator background (black background)
+  const int16_t indicator_height = 20;
+  const GRect indicator_frame = GRect(0, scroll_bounds.size.h - indicator_height, 
+                                      scroll_bounds.size.w, indicator_height);
+  s_content_indicator_layer = layer_create(indicator_frame);
+  layer_set_update_proc(s_content_indicator_layer, prv_draw_content_indicator_background);
+  layer_add_child(scroll_layer_get_layer(s_scroll_layer), s_content_indicator_layer);
+  
+  // Configure the down direction with white arrow
+  ContentIndicatorConfig indicator_config = {
+    .layer = s_content_indicator_layer,
+    .times_out = false,
+    .alignment = GAlignCenter,
+    .colors = {
+      .foreground = GColorWhite,
+      .background = GColorBlack,
+    }
+  };
+  content_indicator_configure_direction(s_content_indicator, ContentIndicatorDirectionDown, &indicator_config);
+  
+  // Initially hidden (will be shown when at top via callback)
+  content_indicator_set_content_available(s_content_indicator, ContentIndicatorDirectionDown, false);
 
   // Title
   const int16_t side_margin = GRID_MARGIN;
   int16_t y_cursor = TITLE_TOP_MARGIN;
   GRect title_frame =
-      GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, GRID_ROW_HEIGHT);
+      GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, FONT_HEIGHT);
   s_title_layer = text_layer_create(title_frame);
   text_layer_set_text(s_title_layer, s_content.title_text);
   text_layer_set_background_color(s_title_layer, GColorClear);
@@ -428,7 +477,7 @@ static void prv_window_load(Window *window) {
     y_cursor += image_layer_height + HERO_IMAGE_BOTTOM_MARGIN;
 
     // Detail text
-    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, GRID_ROW_HEIGHT);
+    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, FONT_HEIGHT);
     s_detail_layer = text_layer_create(detail_frame);
     text_layer_set_text(s_detail_layer, s_content.detail_text);
     text_layer_set_background_color(s_detail_layer, GColorClear);
@@ -536,6 +585,11 @@ static void prv_window_unload(Window *window) {
     status_bar_layer_destroy(s_status_layer);
     s_status_layer = NULL;
   }
+  if (s_content_indicator_layer) {
+    layer_destroy(s_content_indicator_layer);
+    s_content_indicator_layer = NULL;
+  }
+  s_content_indicator = NULL;  // This is owned by scroll_layer, don't destroy
   action_indicator_destroy();
   if (s_scroll_layer) {
     scroll_layer_destroy(s_scroll_layer);
@@ -578,6 +632,8 @@ void details_deinit(void) {
   s_pdc_image = NULL;
   s_bitmap_image = NULL;
   s_status_layer = NULL;
+  s_content_indicator_layer = NULL;
+  s_content_indicator = NULL;
   
   // Deinitialize bodymsg system
   bodymsg_deregister_callbacks();

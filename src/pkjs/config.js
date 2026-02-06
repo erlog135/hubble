@@ -54,21 +54,21 @@ module.exports = [
         "type": "toggle",
         "messageKey": "CFG_SUN_EQUINOXES",
         "label": "Equinoxes",
-        "defaultValue": true,
+        "defaultValue": false,
         "description": "Days with equal daylight and darkness."
       },
       {
         "type": "toggle",
         "messageKey": "CFG_SUN_ECLIPSES",
         "label": "Eclipses",
-        "defaultValue": true,
+        "defaultValue": false,
         "description": "Moon passes between Earth and Sun, or Earth passes between Moon and Sun. Location, type, and peak of eclipse will be provided."
       },
       {
         "type": "toggle",
         "messageKey": "CFG_SUN_SOLAR_TRANSITS",
         "label": "Solar Transits",
-        "defaultValue": true,
+        "defaultValue": false,
         "description": "Mercury or Venus passes in front of the Sun."
       }
     ]
@@ -84,14 +84,14 @@ module.exports = [
         "type": "toggle",
         "messageKey": "CFG_MOON_RISE_SET",
         "label": "Moonrise & Moonset",
-        "defaultValue": true,
+        "defaultValue": false,
         "description": "Moon crosses the horizon. Moon phase will also be provided."
       },
       {
         "type": "toggle",
         "messageKey": "CFG_MOON_APOGEE_PERIGEE",
         "label": "Lunar Apogee & Perigee",
-        "defaultValue": true,
+        "defaultValue": false,
         "description": "Moon at farthest (apogee) and closest (perigee) points in its orbit around Earth."
       }
     ]
@@ -123,6 +123,7 @@ module.exports = [
   },
   {
     "type": "submit",
-    "defaultValue": "Save Settings"
+    "defaultValue": "Save Settings",
+    "description":'After saving settings, open the "Refresh Events" page on the watchapp to update your Timeline.'
   }
 ];
