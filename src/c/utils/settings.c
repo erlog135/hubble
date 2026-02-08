@@ -11,7 +11,7 @@ void settings_save() {
 
 void settings_load_default() {
     settings.favorites = 0; // all off
-    settings.magnetic_declination = 0;
+    settings.magnetic_declination = 255; // probably impossible declination value
 }
 
 void settings_load() {

@@ -5,6 +5,9 @@
 #include "options.h"
 #include "action_indicator.h"
 
+// Uncomment the following line to enable demo mode
+#define DEMO_MODE
+
 #define HERO_IMAGE_SIZE 50
 #define CONSTELLATION_IMAGE_SIZE 80
 #define CONSTELLATION_BODY_ID_START 10
@@ -27,6 +30,7 @@
 #define HERO_IMAGE_BOTTOM_MARGIN 0
 #define DETAIL_BOTTOM_MARGIN 0
 #define LONG_TEXT_TOP_MARGIN 4
+#define LONG_TEXT_SIDE_MARGIN PBL_IF_ROUND_ELSE(0, 4)
 
 #ifdef PBL_PLATFORM_EMERY
   char *title_font_key = FONT_KEY_GOTHIC_24_BOLD;
@@ -79,6 +83,38 @@ static const DetailsContent s_loading_content = {
 static bool prv_is_constellation(void) {
   return s_content.body_id >= CONSTELLATION_BODY_ID_START;
 }
+
+#ifdef DEMO_MODE
+static void prv_apply_demo_mode(DetailsContent *content) {
+  if (!content) {
+    return;
+  }
+  
+  // Check if this is a moon body (body_id 0)
+  if (content->body_id == 0) {
+    // Full moon demo data
+    content->title_text = "Moon";
+    content->detail_text = "Full Moon";
+    content->grid_top_left = "RISE";
+    content->grid_top_right = "SET";
+    content->grid_bottom_left = "10:49PM";
+    content->grid_bottom_right = "9:26AM";
+    content->altitude_deg = -52;
+    content->azimuth_deg = 39;
+    content->illumination_x10 = -110;  // -11.0
+    content->image_resource_id = RESOURCE_ID_FULL_MOON;
+    content->image_type = DETAILS_IMAGE_TYPE_BITMAP;
+  } 
+  // Check if this is a constellation (body_id >= 10)
+  else if (content->body_id >= CONSTELLATION_BODY_ID_START) {
+    // Cassiopeia demo data
+    content->title_text = "Cassiopeia";
+    content->detail_text = "69° above horizon";
+    content->altitude_deg = 69;
+    content->azimuth_deg = 326;
+  }
+}
+#endif
 
 static GSize prv_get_image_size(void) {
   if (prv_is_constellation()) {
@@ -526,7 +562,7 @@ static void prv_window_load(Window *window) {
   }
 
   // Long-form text after the first "page"
-  GRect long_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, bounds.size.h);
+  GRect long_frame = GRect(LONG_TEXT_SIDE_MARGIN, y_cursor, bounds.size.w - LONG_TEXT_SIDE_MARGIN * 2, bounds.size.h);
 
   s_long_text_layer = text_layer_create(long_frame);
   text_layer_set_text(s_long_text_layer, s_content.long_text);
@@ -651,6 +687,12 @@ void details_show(const DetailsContent *content) {
   // Update content
   if (content) {
     s_content = *content;
+    
+#ifdef DEMO_MODE
+    // Apply demo mode overrides
+    prv_apply_demo_mode(&s_content);
+#endif
+    
     s_is_loading = false;
 
     // Show action indicator now that loading is complete

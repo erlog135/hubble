@@ -8,6 +8,9 @@
 #include <pebble.h>
 #include <string.h>
 
+// Uncomment the following line to enable demo mode
+#define DEMO_MODE
+
 #define GRID_MARGIN 0
 #define GRID_ROWS 2
 #define GRID_COLS 2
@@ -25,12 +28,24 @@ static ActionBarLayer *s_action_bar;
 static GBitmap *s_icon_light_on;
 static GBitmap *s_icon_light_off;
 static bool s_light_enabled;
+#ifdef DEMO_MODE
+static bool s_is_calibrated = true;  // Demo mode: Always calibrated
+#else
 static bool s_is_calibrated;
+#endif
 static bool s_declination_requested = false;
 
+#ifdef DEMO_MODE
+// Demo mode: Target Cassiopeia at alt 69, az 326
+static TargetData s_target = {69, 326};
+// Demo mode: Current position at alt 57, az 290
+static int16_t s_current_altitude_deg = 57;
+static int16_t s_current_azimuth_deg = 290;
+#else
 static TargetData s_target = {42, 245};
 static int16_t s_current_altitude_deg = 0;
 static int16_t s_current_azimuth_deg = 0;
+#endif
 
 static void prv_update_labels(void);
 static void prv_request_declination(void);
@@ -143,13 +158,24 @@ static void prv_update_labels(void) {
   if (s_current_grid[1][1]) {
     if (s_is_calibrated) {
       LocalSettings *settings = settings_get();
-      int16_t corrected_azimuth = s_current_azimuth_deg + settings->magnetic_declination;
+      
+      int16_t corrected_azimuth = s_current_azimuth_deg;
+      
+      // Only apply magnetic declination if it's not the unset value (255)
+      if (settings->magnetic_declination != 255) {
+        corrected_azimuth += settings->magnetic_declination;
+      }
+      
       // Normalize to 0-359 range
       while (corrected_azimuth < 0) corrected_azimuth += 360;
       while (corrected_azimuth >= 360) corrected_azimuth -= 360;
       
+      #ifdef DEMO_MODE
+      settings->magnetic_declination = 0;
+      #endif
+
       static char s_current_az_text[20];
-      if (settings->magnetic_declination != 0) {
+      if (settings->magnetic_declination != 255) {
         snprintf(s_current_az_text, sizeof(s_current_az_text), "%d°😊", corrected_azimuth);
       } else {
         snprintf(s_current_az_text, sizeof(s_current_az_text), "%d°", corrected_azimuth);
@@ -217,7 +243,13 @@ static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
 #if defined(PBL_COMPASS)
   // Apply magnetic declination correction to current azimuth
   LocalSettings *settings = settings_get();
-  int16_t corrected_current_azimuth = s_current_azimuth_deg + settings->magnetic_declination;
+  int16_t corrected_current_azimuth = s_current_azimuth_deg;
+  
+  // Only apply magnetic declination if it's not the unset value (255)
+  if (settings->magnetic_declination != 255) {
+    corrected_current_azimuth += settings->magnetic_declination;
+  }
+  
   const int16_t delta_az = prv_normalize_azimuth_delta(s_target.azimuth_deg - corrected_current_azimuth);
 #endif
 
@@ -279,7 +311,7 @@ static void prv_window_load(Window *window) {
 
   const GRect content_bounds =
       GRect(bounds.origin.x, bounds.origin.y + PBL_IF_ROUND_ELSE(0, STATUS_BAR_LAYER_HEIGHT),
-           bounds.size.w - ACTION_BAR_WIDTH, bounds.size.h - PBL_IF_ROUND_ELSE(0, STATUS_BAR_LAYER_HEIGHT));
+           bounds.size.w - PBL_IF_ROUND_ELSE(0, ACTION_BAR_WIDTH), bounds.size.h - PBL_IF_ROUND_ELSE(0, STATUS_BAR_LAYER_HEIGHT));
 
   const GFont header_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   const GFont value_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
@@ -298,9 +330,16 @@ static void prv_window_load(Window *window) {
 
   // Use corner-based layout with edge padding
   const int16_t padding = PBL_IF_ROUND_ELSE(CORNER_LABEL_PADDING_ROUND, CORNER_LABEL_PADDING_RECT);
-  char *font_key = PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_14, FONT_KEY_GOTHIC_18);
+  
+  #ifdef PBL_PLATFORM_EMERY
+    char *font_key = FONT_KEY_GOTHIC_24;
+    const int16_t label_height = 28;
+  #else
+    char *font_key = PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_14, FONT_KEY_GOTHIC_18);
+    const int16_t label_height = PBL_IF_ROUND_ELSE(18, 21);
+  #endif
+
   const int16_t label_width = content_bounds.size.w / 2;
-  const int16_t label_height = PBL_IF_ROUND_ELSE(18, 21);
   const GFont corner_font = fonts_get_system_font(font_key);
   
   // Top-left corner: "Alt" label and value
@@ -346,7 +385,7 @@ static void prv_window_load(Window *window) {
   const int16_t bl_y = content_bounds.origin.y + content_bounds.size.h - padding - (label_height * 2);
   s_current_grid[0][0] = text_layer_create(GRect(bl_x, bl_y, label_width, label_height));
   text_layer_set_text(s_current_grid[0][0], "My Alt");
-  text_layer_set_background_color(s_current_grid[0][0], GColorBlack);
+  text_layer_set_background_color(s_current_grid[0][0], GColorClear);
   text_layer_set_text_color(s_current_grid[0][0], layout->foreground);
   text_layer_set_font(s_current_grid[0][0], corner_font);
   text_layer_set_text_alignment(s_current_grid[0][0], GTextAlignmentCenter);
@@ -406,7 +445,11 @@ static void prv_window_load(Window *window) {
 
   prv_update_labels();
 
-#if defined(PBL_COMPASS)
+#ifdef DEMO_MODE
+  // Demo mode: Always show crosshair and hide calibration message
+  layer_set_hidden(text_layer_get_layer(s_calibration_layer), true);
+  layer_set_hidden(s_crosshair_layer, false);
+#elif defined(PBL_COMPASS)
   // Apply current calibration state to UI after window is loaded
   prv_on_calibration(s_is_calibrated);
   
@@ -478,6 +521,7 @@ void locator_init(void) {
                                 });
 
   // Start sensors/providers after window creation so callbacks can update labels.
+#ifndef DEMO_MODE
   altitude_provider_init();
   altitude_provider_set_handler(prv_on_altitude);
 
@@ -486,6 +530,7 @@ void locator_init(void) {
   azimuth_provider_set_handler(prv_on_azimuth);
   azimuth_provider_set_calibration_handler(prv_on_calibration);
 #endif
+#endif
 }
 
 void locator_deinit(void) {
@@ -493,11 +538,13 @@ void locator_deinit(void) {
     return;
   }
 
+#ifndef DEMO_MODE
 #if defined(PBL_COMPASS)
   azimuth_provider_deinit();
   s_declination_requested = false;
 #endif
   altitude_provider_deinit();
+#endif
 
   window_stack_remove(s_window, false);
   window_destroy(s_window);
