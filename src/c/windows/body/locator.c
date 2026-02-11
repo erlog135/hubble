@@ -9,7 +9,7 @@
 #include <string.h>
 
 // Uncomment the following line to enable demo mode
-#define DEMO_MODE
+// #define DEMO_MODE
 
 #define GRID_MARGIN 0
 #define GRID_ROWS 2

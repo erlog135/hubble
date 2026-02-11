@@ -6,7 +6,7 @@
 #include "action_indicator.h"
 
 // Uncomment the following line to enable demo mode
-#define DEMO_MODE
+// #define DEMO_MODE
 
 #define HERO_IMAGE_SIZE 50
 #define CONSTELLATION_IMAGE_SIZE 80
@@ -226,13 +226,8 @@ static void prv_update_content_display(void) {
     text_layer_set_text(s_detail_layer, s_content.detail_text);
   }
 
-  // Update grid text - empty for constellations
-  if (prv_is_constellation()) {
-    if (s_grid_layers[0][0]) text_layer_set_text(s_grid_layers[0][0], "");
-    if (s_grid_layers[0][1]) text_layer_set_text(s_grid_layers[0][1], "");
-    if (s_grid_layers[1][0]) text_layer_set_text(s_grid_layers[1][0], "");
-    if (s_grid_layers[1][1]) text_layer_set_text(s_grid_layers[1][1], "");
-  } else {
+  // Update grid text (only exists for non-constellations)
+  if (!prv_is_constellation()) {
     if (s_grid_layers[0][0]) text_layer_set_text(s_grid_layers[0][0], s_content.grid_top_left);
     if (s_grid_layers[0][1]) text_layer_set_text(s_grid_layers[0][1], s_content.grid_top_right);
     if (s_grid_layers[1][0]) text_layer_set_text(s_grid_layers[1][0], s_content.grid_bottom_left);
@@ -314,23 +309,24 @@ static void prv_click_config_provider(void *context) {
 }
 
 static void prv_create_grid_layers(GRect bounds, GFont font) {
+  // Don't create grid layers for constellations - they don't have rise/set times
+  if (prv_is_constellation()) {
+    for (int row = 0; row < GRID_ROWS; ++row) {
+      for (int col = 0; col < GRID_COLS; ++col) {
+        s_grid_layers[row][col] = NULL;
+      }
+    }
+    return;
+  }
+
   const int16_t column_width = (bounds.size.w - GRID_MARGIN * 3) / 2;
   const int16_t row_height = GRID_ROW_HEIGHT;
   int16_t y = bounds.origin.y;
 
-  // Empty grid text for constellations
-  const char *grid_text[GRID_ROWS][GRID_COLS];
-  if (prv_is_constellation()) {
-    grid_text[0][0] = "";
-    grid_text[0][1] = "";
-    grid_text[1][0] = "";
-    grid_text[1][1] = "";
-  } else {
-    grid_text[0][0] = s_content.grid_top_left;
-    grid_text[0][1] = s_content.grid_top_right;
-    grid_text[1][0] = s_content.grid_bottom_left;
-    grid_text[1][1] = s_content.grid_bottom_right;
-  }
+  const char *grid_text[GRID_ROWS][GRID_COLS] = {
+    {s_content.grid_top_left, s_content.grid_top_right},
+    {s_content.grid_bottom_left, s_content.grid_bottom_right}
+  };
 
   for (int row = 0; row < GRID_ROWS; ++row) {
     int16_t x = GRID_MARGIN;
@@ -470,18 +466,24 @@ static void prv_window_load(Window *window) {
     const int16_t image_layer_x = image_center_x - (image_layer_width / 2);
     const int16_t image_layer_y = image_center_y - (image_layer_height_round / 2) - STATUS_BAR_LAYER_HEIGHT;
 
-    // Left column (RISE) - empty for constellations
-    for (int row = 0; row < GRID_ROWS; ++row) {
-      GRect frame = GRect(left_grid_x, grid_y + row * (grid_row_height + GRID_MARGIN), grid_column_width, grid_row_height);
-      s_grid_layers[row][0] = text_layer_create(frame);
-      const char *text = prv_is_constellation() ? "" : (row == 0 ? s_content.grid_top_left : s_content.grid_bottom_left);
-      text_layer_set_text(s_grid_layers[row][0], text);
-      text_layer_set_background_color(s_grid_layers[row][0], GColorClear);
-      text_layer_set_text_color(s_grid_layers[row][0], layout->foreground);
-      text_layer_set_font(s_grid_layers[row][0], fonts_get_system_font(grid_font_key));
-      text_layer_set_overflow_mode(s_grid_layers[row][0], GTextOverflowModeWordWrap);
-      text_layer_set_text_alignment(s_grid_layers[row][0], GTextAlignmentCenter);
-      scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][0]));
+    // Left column (RISE) - not created for constellations to save memory
+    if (!prv_is_constellation()) {
+      for (int row = 0; row < GRID_ROWS; ++row) {
+        GRect frame = GRect(left_grid_x, grid_y + row * (grid_row_height + GRID_MARGIN), grid_column_width, grid_row_height);
+        s_grid_layers[row][0] = text_layer_create(frame);
+        const char *text = (row == 0 ? s_content.grid_top_left : s_content.grid_bottom_left);
+        text_layer_set_text(s_grid_layers[row][0], text);
+        text_layer_set_background_color(s_grid_layers[row][0], GColorClear);
+        text_layer_set_text_color(s_grid_layers[row][0], layout->foreground);
+        text_layer_set_font(s_grid_layers[row][0], fonts_get_system_font(grid_font_key));
+        text_layer_set_overflow_mode(s_grid_layers[row][0], GTextOverflowModeWordWrap);
+        text_layer_set_text_alignment(s_grid_layers[row][0], GTextAlignmentCenter);
+        scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][0]));
+      }
+    } else {
+      for (int row = 0; row < GRID_ROWS; ++row) {
+        s_grid_layers[row][0] = NULL;
+      }
     }
 
     // Image centered in window (horizontally and vertically)
@@ -490,18 +492,24 @@ static void prv_window_load(Window *window) {
     layer_set_update_proc(s_image_layer, prv_draw_image);
     scroll_layer_add_child(s_scroll_layer, s_image_layer);
 
-    // Right column (SET) - empty for constellations
-    for (int row = 0; row < GRID_ROWS; ++row) {
-      GRect frame = GRect(right_grid_x, grid_y + row * (grid_row_height + GRID_MARGIN), grid_column_width, grid_row_height);
-      s_grid_layers[row][1] = text_layer_create(frame);
-      const char *text = prv_is_constellation() ? "" : (row == 0 ? s_content.grid_top_right : s_content.grid_bottom_right);
-      text_layer_set_text(s_grid_layers[row][1], text);
-      text_layer_set_background_color(s_grid_layers[row][1], GColorClear);
-      text_layer_set_text_color(s_grid_layers[row][1], layout->foreground);
-      text_layer_set_font(s_grid_layers[row][1], fonts_get_system_font(grid_font_key));
-      text_layer_set_overflow_mode(s_grid_layers[row][1], GTextOverflowModeWordWrap);
-      text_layer_set_text_alignment(s_grid_layers[row][1], GTextAlignmentCenter);
-      scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][1]));
+    // Right column (SET) - not created for constellations to save memory
+    if (!prv_is_constellation()) {
+      for (int row = 0; row < GRID_ROWS; ++row) {
+        GRect frame = GRect(right_grid_x, grid_y + row * (grid_row_height + GRID_MARGIN), grid_column_width, grid_row_height);
+        s_grid_layers[row][1] = text_layer_create(frame);
+        const char *text = (row == 0 ? s_content.grid_top_right : s_content.grid_bottom_right);
+        text_layer_set_text(s_grid_layers[row][1], text);
+        text_layer_set_background_color(s_grid_layers[row][1], GColorClear);
+        text_layer_set_text_color(s_grid_layers[row][1], layout->foreground);
+        text_layer_set_font(s_grid_layers[row][1], fonts_get_system_font(grid_font_key));
+        text_layer_set_overflow_mode(s_grid_layers[row][1], GTextOverflowModeWordWrap);
+        text_layer_set_text_alignment(s_grid_layers[row][1], GTextAlignmentCenter);
+        scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][1]));
+      }
+    } else {
+      for (int row = 0; row < GRID_ROWS; ++row) {
+        s_grid_layers[row][1] = NULL;
+      }
     }
 
     y_cursor = image_layer_y + image_layer_height_round + HERO_IMAGE_BOTTOM_MARGIN;
@@ -711,10 +719,8 @@ void details_show(const DetailsContent *content) {
 
   if (window_visible && old_is_constellation != new_is_constellation) {
     // Body type changed, need to recreate window with correct layout
-    //^ does that even happen?
+    // Remove and re-push the window - handlers will automatically unload/load
     window_stack_remove(s_window, false);
-    prv_window_unload(s_window);
-    prv_window_load(s_window);
     window_stack_push(s_window, false);
   } else if (window_visible) {
     // Window is already visible, update the content in place

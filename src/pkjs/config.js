@@ -122,8 +122,16 @@ module.exports = [
     ]
   },
   {
-    "type": "submit",
-    "defaultValue": "Save Settings",
-    "description":'After saving settings, open the "Refresh Events" page on the watchapp to update your Timeline.'
+    "type": "section",
+    "items": [
+      {
+        "type": "submit",
+        "defaultValue": "Save Settings",
+      },
+      {
+        "type": "text",
+        "defaultValue": "After saving settings, open the \"Refresh Events\" page on the watchapp to update your Timeline.",
+      }
+    ]
   }
 ];

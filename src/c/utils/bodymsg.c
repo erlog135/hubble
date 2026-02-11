@@ -5,7 +5,7 @@
 #include <pebble.h>
 
 // Message buffer sizes
-#define INBOX_SIZE 128
+#define INBOX_SIZE 64
 #define OUTBOX_SIZE 64
 
 // Static variables

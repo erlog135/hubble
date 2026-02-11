@@ -135,47 +135,51 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
 
 
     // Format the content structure
-    content->title_text = body_name;
+    snprintf(content->title_text, sizeof(content->title_text), "%s", body_name);
     content->body_id = body_id;
 
     // Detail text: for Moon show phase, for others show basic info
     if (is_moon && phase < sizeof(MOON_PHASES)/sizeof(MOON_PHASES[0])) {
-        content->detail_text = MOON_PHASES[phase];
+        snprintf(content->detail_text, sizeof(content->detail_text), "%s", MOON_PHASES[phase]);
     } else {
         // For planets, show altitude and azimuth
-        static char detail_buf[32];
         if (altitude >= 0) {
-            snprintf(detail_buf, sizeof(detail_buf), "%d° above horizon", (int)altitude);
+            snprintf(content->detail_text, sizeof(content->detail_text), "%d° above horizon", (int)altitude);
         } else {
-            snprintf(detail_buf, sizeof(detail_buf), "%d° below horizon", -(int)altitude);
+            snprintf(content->detail_text, sizeof(content->detail_text), "%d° below horizon", -(int)altitude);
         }
-        content->detail_text = detail_buf;
     }
 
     // Grid: Rise/Set times for bodies that can have them calculated, Azimuth/Altitude for others
 
     if (can_have_rise_set) {
         // For Moon and planets: show rise/set times
-        content->grid_top_left = "RISE";
-        content->grid_top_right = "SET";
+        snprintf(content->grid_top_left, sizeof(content->grid_top_left), "RISE");
+        snprintf(content->grid_top_right, sizeof(content->grid_top_right), "SET");
 
         if (rise_hour != SENTINEL_HOUR && rise_minute != SENTINEL_MIN) {
-            content->grid_bottom_left = msgproc_format_time(rise_hour, rise_minute, s_rise_time_buffer, sizeof(s_rise_time_buffer));
+            msgproc_format_time(rise_hour, rise_minute, s_rise_time_buffer, sizeof(s_rise_time_buffer));
+            snprintf(content->grid_bottom_left, sizeof(content->grid_bottom_left), "%s", s_rise_time_buffer);
         } else {
-            content->grid_bottom_left = "--:--";
+            snprintf(content->grid_bottom_left, sizeof(content->grid_bottom_left), "--:--");
         }
 
         if (set_hour != SENTINEL_HOUR && set_minute != SENTINEL_MIN) {
-            content->grid_bottom_right = msgproc_format_time(set_hour, set_minute, s_set_time_buffer, sizeof(s_set_time_buffer));
+            msgproc_format_time(set_hour, set_minute, s_set_time_buffer, sizeof(s_set_time_buffer));
+            snprintf(content->grid_bottom_right, sizeof(content->grid_bottom_right), "%s", s_set_time_buffer);
         } else {
-            content->grid_bottom_right = "--:--";
+            snprintf(content->grid_bottom_right, sizeof(content->grid_bottom_right), "--:--");
         }
     } else {
         // For other bodies (moons, future constellations): show azimuth and altitude
-        content->grid_top_left = "AZIMUTH";
-        content->grid_top_right = "ALTITUDE";
-        content->grid_bottom_left = msgproc_format_angle((int)azimuth, true);   // azimuth
-        content->grid_bottom_right = msgproc_format_angle((int)altitude, false); // altitude
+        snprintf(content->grid_top_left, sizeof(content->grid_top_left), "AZIMUTH");
+        snprintf(content->grid_top_right, sizeof(content->grid_top_right), "ALTITUDE");
+        
+        const char *az_str = msgproc_format_angle((int)azimuth, true);
+        snprintf(content->grid_bottom_left, sizeof(content->grid_bottom_left), "%s", az_str);
+        
+        const char *alt_str = msgproc_format_angle((int)altitude, false);
+        snprintf(content->grid_bottom_right, sizeof(content->grid_bottom_right), "%s", alt_str);
     }
 
     // long_text buffer will be filled by details.c

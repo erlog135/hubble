@@ -12,13 +12,13 @@ typedef enum {
 } DetailsImageType;
 
 typedef struct {
-  const char *title_text;
-  const char *detail_text;
-  const char *grid_top_left;
-  const char *grid_top_right;
-  const char *grid_bottom_left;
-  const char *grid_bottom_right;
-  char long_text[128];  // Buffer for dynamically formatted long text
+  char title_text[16];       // Body name
+  char detail_text[24];      // Phase or altitude description
+  char grid_top_left[10];    // Grid header or label
+  char grid_top_right[10];   // Grid header or label
+  char grid_bottom_left[10]; // Formatted time or value
+  char grid_bottom_right[10];// Formatted time or value
+  char long_text[80];        // Buffer for dynamically formatted long text
   uint32_t image_resource_id;  // RESOURCE_ID_*
   DetailsImageType image_type;
   int16_t azimuth_deg;  // Azimuth in degrees (0-360)
