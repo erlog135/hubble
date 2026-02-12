@@ -170,19 +170,11 @@ bool msgproc_unpack_body_package(const uint8_t *data, size_t length, DetailsCont
         } else {
             snprintf(content->grid_bottom_right, sizeof(content->grid_bottom_right), "--:--");
         }
-    } else {
-        // For other bodies (moons, future constellations): show azimuth and altitude
-        snprintf(content->grid_top_left, sizeof(content->grid_top_left), "AZIMUTH");
-        snprintf(content->grid_top_right, sizeof(content->grid_top_right), "ALTITUDE");
-        
-        const char *az_str = msgproc_format_angle((int)azimuth, true);
-        snprintf(content->grid_bottom_left, sizeof(content->grid_bottom_left), "%s", az_str);
-        
-        const char *alt_str = msgproc_format_angle((int)altitude, false);
-        snprintf(content->grid_bottom_right, sizeof(content->grid_bottom_right), "%s", alt_str);
     }
 
     // long_text buffer will be filled by details.c
+
+    
     content->image_resource_id = resource_id;
 
     // Determine image type (planets use bitmap, others use PDC)

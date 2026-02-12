@@ -3,20 +3,11 @@
 #include "../../style.h"
 #include "../../utils/bodymsg.h"
 #include "../../utils/logging.h"
+#include "../../utils/body_info.h"
 
-#define PLANET_COUNT 8
-
-// Body IDs for each menu item (must match order in menu)
-static const int PLANET_BODY_IDS[PLANET_COUNT] = {
-  1,  // Mercury
-  2,  // Venus
-  3,  // Mars
-  4,  // Jupiter
-  5,  // Saturn
-  6,  // Uranus
-  7,  // Neptune
-  8   // Pluto
-};
+#define PLANET_START_ID 1
+#define PLANET_END_ID 8
+#define PLANET_COUNT (PLANET_END_ID - PLANET_START_ID + 1)
 
 static Window *s_window;
 static SimpleMenuLayer *s_menu_layer;
@@ -24,11 +15,11 @@ static SimpleMenuSection s_menu_sections[1];
 static SimpleMenuItem s_menu_items[PLANET_COUNT];
 
 static void prv_menu_select_callback(int index, void *context) {
+  int body_id = PLANET_START_ID + index;
   HUBBLE_LOG(APP_LOG_LEVEL_INFO, "Planets menu selected: %s (body ID: %d)",
-          s_menu_items[index].title, PLANET_BODY_IDS[index]);
+          s_menu_items[index].title, body_id);
 
   if (index >= 0 && index < PLANET_COUNT) {
-    int body_id = PLANET_BODY_IDS[index];
     details_show_body(body_id);
   } else {
     HUBBLE_LOG(APP_LOG_LEVEL_ERROR, "Invalid menu index: %d", index);
@@ -42,38 +33,14 @@ static void prv_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
 
-  s_menu_items[0] = (SimpleMenuItem){
-      .title = "Mercury",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[1] = (SimpleMenuItem){
-      .title = "Venus",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[2] = (SimpleMenuItem){
-      .title = "Mars",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[3] = (SimpleMenuItem){
-      .title = "Jupiter",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[4] = (SimpleMenuItem){
-      .title = "Saturn",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[5] = (SimpleMenuItem){
-      .title = "Uranus",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[6] = (SimpleMenuItem){
-      .title = "Neptune",
-      .callback = prv_menu_select_callback,
-  };
-  s_menu_items[7] = (SimpleMenuItem){
-      .title = "Pluto",
-      .callback = prv_menu_select_callback,
-  };
+  // Build menu items from body ID range
+  for (int i = 0; i < PLANET_COUNT; i++) {
+    int body_id = PLANET_START_ID + i;
+    s_menu_items[i] = (SimpleMenuItem){
+        .title = body_info_get_name(body_id),
+        .callback = prv_menu_select_callback,
+    };
+  }
 
   s_menu_sections[0] = (SimpleMenuSection){
       .num_items = ARRAY_LENGTH(s_menu_items),
@@ -117,6 +84,7 @@ void planets_menu_deinit(void) {
   window_destroy(s_window);
   s_window = NULL;
   s_menu_layer = NULL;
+  APP_LOG(APP_LOG_LEVEL_INFO, "Planets menu deinitialized");
 }
 
 void planets_menu_show(void) {
@@ -129,5 +97,7 @@ void planets_menu_show(void) {
 void planets_menu_hide(void) {
   if (s_window) {
     window_stack_remove(s_window, true);
+    window_destroy(s_window);
+    s_window = NULL;
   }
 }

@@ -590,6 +590,8 @@ void locator_show(void) {
 void locator_hide(void) {
   if (s_window) {
     window_stack_remove(s_window, true);
+    window_destroy(s_window);
+    s_window = NULL;
   }
 }
 
