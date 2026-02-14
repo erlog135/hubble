@@ -4,6 +4,7 @@
 
 var timeline = require('../timeline');
 var pinBuilder = require('./pinBuilder');
+var logger = require('../logger');
 
 /**
  * Push a test pin to the timeline (for development testing)
@@ -35,12 +36,12 @@ function pushTestPin() {
     ]
   };
 
-  console.log("ISO: " + date.toISOString());
-  console.log("timestamp: " + pinBuilder.generateTimestamp());
+  logger.log("ISO: " + date.toISOString());
+  logger.log("timestamp: " + pinBuilder.generateTimestamp());
 
   // Push the pin
   timeline.insertUserPin(pin, function(responseText) {
-    console.log('Test pin pushed: ' + responseText);
+    logger.log('Test pin pushed: ' + responseText);
   });
 }
 
@@ -51,7 +52,7 @@ function deleteTestPin() {
   timeline.deleteUserPin({
     "id": "00-00-test"
   }, function(responseText) {
-    console.log('Test pin deleted: ' + responseText);
+    logger.log('Test pin deleted: ' + responseText);
   });
 }
 

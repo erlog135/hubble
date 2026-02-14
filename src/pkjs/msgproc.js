@@ -14,6 +14,7 @@
 var Keys = require('message_keys');
 var Bodies = require('./astronomy/bodies');
 var Events = require('./astronomy/events');
+var logger = require('./logger');
 
 // Body names keyed by body id (must stay in sync with watch side)
 var BODY_NAMES = [
@@ -88,7 +89,7 @@ function packBodyPackage(bodyId, observer, date) {
     // For planets and Moon, use standard horizontal calculation
     horizontal = Bodies.getHorizontal(bodyName, observer, when);
   } catch (err) {
-    console.log('Warning: Could not calculate horizontal position for ' + bodyName + ': ' + err.message);
+    logger.log('Warning: Could not calculate horizontal position for ' + bodyName + ': ' + err.message);
     horizontal = { azimuth: 0, altitude: 0 };
   }
 
@@ -96,9 +97,9 @@ function packBodyPackage(bodyId, observer, date) {
   if (canHaveRiseSet) {
     try {
       riseSet = Bodies.getRiseSet(bodyName, observer, when);
-      console.log('Rise/set: ' + riseSet.rise + ' - ' + riseSet.set);
+      logger.log('Rise/set: ' + riseSet.rise + ' - ' + riseSet.set);
     } catch (err) {
-      console.log('Warning: Could not calculate rise/set for ' + bodyName + ': ' + err.message);
+      logger.log('Warning: Could not calculate rise/set for ' + bodyName + ': ' + err.message);
       riseSet = { rise: null, set: null };
     }
   } else {
@@ -110,7 +111,7 @@ function packBodyPackage(bodyId, observer, date) {
   try {
     illum = Bodies.getIllumination(bodyName, when);
   } catch (err) {
-    console.log('Warning: Could not calculate illumination for ' + bodyName + ': ' + err.message);
+    logger.log('Warning: Could not calculate illumination for ' + bodyName + ': ' + err.message);
     illum = { mag: 0 };
   }
 
@@ -119,7 +120,7 @@ function packBodyPackage(bodyId, observer, date) {
     try {
       phase = Events.getMoonPhase(when);
     } catch (err) {
-      console.log('Warning: Could not calculate moon phase: ' + err.message);
+      logger.log('Warning: Could not calculate moon phase: ' + err.message);
       phase = 0;
     }
   }
@@ -133,9 +134,9 @@ function packBodyPackage(bodyId, observer, date) {
   var setMin = riseSet.set ? riseSet.set.getMinutes() : SENTINEL_MIN;
 
 
-  console.log('Rise/set: ' + riseHour + ':' + riseMin + ' - ' + setHour + ':' + setMin);
-  console.log('Illum: ' + illum.mag);
-  console.log('Phase: ' + phase);
+  logger.log('Rise/set: ' + riseHour + ':' + riseMin + ' - ' + setHour + ':' + setMin);
+  logger.log('Illum: ' + illum.mag);
+  logger.log('Phase: ' + phase);
   
   var lumTimes10 = encodeSigned((illum && illum.mag != null) ? illum.mag * 10 : 0, 9, -256, 255);
   var phaseIndex = encodeUnsigned(phase, 3, 0, 7);
@@ -176,17 +177,17 @@ function sendBodyPackage(bodyId, observer, date) {
       return dict;
     })(),
     function() {
-      console.log('Sent body package for body ' + bodyId);
+      logger.log('Sent body package for body ' + bodyId);
     },
     function(err) {
-      console.log('Failed to send body package: ' + JSON.stringify(err));
+      logger.log('Failed to send body package: ' + JSON.stringify(err));
     }
   );
 }
 
 function createBodyRequestHandler(observerProvider) {
   return function(payload) {
-    console.log('Processing body request from payload: ' + JSON.stringify(payload));
+    logger.log('Processing body request from payload: ' + JSON.stringify(payload));
 
     //this is okay in emulator but not on device
     // var bodyId = payload[Keys.REQUEST_BODY];
@@ -205,11 +206,11 @@ function createBodyRequestHandler(observerProvider) {
       return false; // Not handled by this handler
     }
 
-    console.log('Received body request for body ' + bodyId);
+    logger.log('Received body request for body ' + bodyId);
 
     var observer = (typeof observerProvider === 'function') ? observerProvider() : observerProvider;
     if (!observer) {
-      console.log('Cannot process body request: missing observer');
+      logger.log('Cannot process body request: missing observer');
       return false;
     }
 
@@ -217,7 +218,7 @@ function createBodyRequestHandler(observerProvider) {
       sendBodyPackage(bodyId, observer, new Date());
       return true; // Handled by this handler
     } catch (err) {
-      console.log('Error handling body request: ' + err.message);
+      logger.log('Error handling body request: ' + err.message);
       return false;
     }
   };

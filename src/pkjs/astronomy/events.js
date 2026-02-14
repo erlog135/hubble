@@ -7,6 +7,7 @@
  */
 
 var Astronomy = require('astronomy-engine');
+var logger = require('../logger');
 
 // Cache for events with timestamp and observer info
 // Cache key format: "lat_lon_date" where lat/lon rounded to 2 decimal places, date to day
@@ -596,7 +597,7 @@ function getAllEvents(observer, date, settings) {
       });
     } catch (e) {
       // Skip bodies that might not be visible or calculable
-      console.log('Error getting rise/set for ' + body + ':', e.message);
+      logger.log('Error getting rise/set for ' + body + ':', e.message);
     }
   });
 
@@ -668,7 +669,7 @@ function getAllEvents(observer, date, settings) {
       });
     }
   } catch (e) {
-    console.log('Error getting twilight events:', e.message);
+    logger.log('Error getting twilight events:', e.message);
   }
 
   // Get solar noon/midnight events
@@ -692,7 +693,7 @@ function getAllEvents(observer, date, settings) {
         }
       });
     } catch (e) {
-      console.log('Error getting solar noon/midnight events:', e.message);
+      logger.log('Error getting solar noon/midnight events:', e.message);
     }
   }
 
@@ -704,7 +705,7 @@ function getAllEvents(observer, date, settings) {
         events.seasonalEvents.push(seasonalEvent);
       }
     } catch (e) {
-      console.log('Error getting seasonal events:', e.message);
+      logger.log('Error getting seasonal events:', e.message);
     }
   }
 
@@ -716,7 +717,7 @@ function getAllEvents(observer, date, settings) {
         events.transitEvents.push(transitEvent);
       }
     } catch (e) {
-      console.log('Error getting transit events:', e.message);
+      logger.log('Error getting transit events:', e.message);
     }
   }
 
@@ -728,7 +729,7 @@ function getAllEvents(observer, date, settings) {
         events.eclipseEvents.push(eclipseEvent);
       }
     } catch (e) {
-      console.log('Error getting eclipse events:', e.message);
+      logger.log('Error getting eclipse events:', e.message);
     }
   }
 
@@ -740,7 +741,7 @@ function getAllEvents(observer, date, settings) {
         events.lunarApsisEvents.push(apsisEvent);
       }
     } catch (e) {
-      console.log('Error getting lunar apsis events:', e.message);
+      logger.log('Error getting lunar apsis events:', e.message);
     }
   }
 

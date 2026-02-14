@@ -4,6 +4,7 @@
 
 var timeline = require('../timeline');
 var constants = require('./constants');
+var logger = require('../logger');
 
 /**
  * Compare old and new settings to identify which features have been disabled
@@ -85,7 +86,7 @@ function deletePinsByPatterns(patterns) {
     return 0;
   }
 
-  console.log('Deleting pins for disabled patterns:', patterns);
+  logger.log('Deleting pins for disabled patterns:', patterns);
 
   var deletions = 0;
 
@@ -106,12 +107,12 @@ function deletePinsByPatterns(patterns) {
     return pinsToDelete.indexOf(item) === pos;
   });
 
-  console.log('Found', pinsToDelete.length, 'pins to delete');
+  logger.log('Found', pinsToDelete.length, 'pins to delete');
 
   // Delete each pin
   pinsToDelete.forEach(function(pinId) {
     timeline.deleteUserPin({ id: pinId }, function(responseText) {
-      console.log('Deleted pin:', pinId, responseText);
+      logger.log('Deleted pin:', pinId, responseText);
     });
     deletions++;
   });

@@ -1,3 +1,5 @@
+var logger = require('./logger');
+
 // The timeline public URL root
 var API_URL_ROOT = 'https://timeline-api.rebble.io/';
 
@@ -16,7 +18,7 @@ function timelineRequest(pin, type, topics, apiKey, callback) {
   // Create XHR
   var xhr = new XMLHttpRequest();
   xhr.onload = function () {
-    console.log('timeline: response received: ' + this.responseText);
+    logger.log('timeline: response received: ' + this.responseText);
     callback(this.responseText);
   };
   xhr.open(type, url);
@@ -35,8 +37,8 @@ function timelineRequest(pin, type, topics, apiKey, callback) {
 
     // Send
     xhr.send(JSON.stringify(pin));
-    console.log('timeline: request sent.');
-  }, function(error) { console.log('timeline: error getting timeline token: ' + error); });
+    logger.log('timeline: request sent.');
+  }, function(error) { logger.log('timeline: error getting timeline token: ' + error); });
 }
 
 /**
@@ -45,7 +47,7 @@ function timelineRequest(pin, type, topics, apiKey, callback) {
  * @param callback The callback to receive the responseText after the request has completed.
  */
 function insertUserPin(pin, callback) {
-  console.log("about to insert pin with id: " + pin.id);
+  logger.log("about to insert pin with id: " + pin.id);
   timelineRequest(pin, 'PUT', null, null, callback);
 }
 

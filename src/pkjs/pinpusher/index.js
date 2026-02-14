@@ -4,6 +4,7 @@
 
 var timeline = require('../timeline');
 var astronomyEvents = require('../astronomy/events');
+var logger = require('../logger');
 
 var cache = require('./cache');
 var dateUtils = require('./dateUtils');
@@ -19,7 +20,7 @@ var testPins = require('./testPins');
  * @returns {number} Number of pins pushed
  */
 function pushAstronomyEvents(observer, date, settings) {
-  console.log('pushAstronomyEvents called with settings:', JSON.stringify(settings));
+  logger.log('pushAstronomyEvents called with settings:', JSON.stringify(settings));
 
   // Check cache
   var cacheCheck = cache.shouldSkipPinPush(settings);
@@ -32,9 +33,9 @@ function pushAstronomyEvents(observer, date, settings) {
   if (lastSettings) {
     var disabledPatterns = pinManager.getDisabledPinIdPatterns(lastSettings, settings);
     if (disabledPatterns.length > 0) {
-      console.log('Disabled patterns found:', disabledPatterns);
+      logger.log('Disabled patterns found:', disabledPatterns);
       var deletions = pinManager.deletePinsByPatterns(disabledPatterns);
-      console.log('Initiated deletion of', deletions, 'pins for disabled features');
+      logger.log('Initiated deletion of', deletions, 'pins for disabled features');
     }
   }
 
@@ -66,7 +67,7 @@ function pushAstronomyEvents(observer, date, settings) {
   // Update cache after successful pin pushing
   cache.updatePinPushCache(settings);
 
-  console.log('Total pins pushed: ' + pinCount);
+  logger.log('Total pins pushed: ' + pinCount);
   return pinCount;
 }
 
@@ -100,7 +101,7 @@ function processRiseSetEvents(events) {
 
     pinCount++;
     timeline.insertUserPin(pin, function(responseText) {
-      console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+      logger.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
     });
   }
 
@@ -137,7 +138,7 @@ function processTwilightEvents(events) {
 
     pinCount++;
     timeline.insertUserPin(pin, function(responseText) {
-      console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+      logger.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
     });
   }
 
@@ -174,7 +175,7 @@ function processSolarNoonMidnightEvents(events) {
 
     pinCount++;
     timeline.insertUserPin(pin, function(responseText) {
-      console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+      logger.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
     });
   }
 
@@ -198,7 +199,7 @@ function processSeasonalEvents(events) {
     pinCount++;
 
     timeline.insertUserPin(pin, function(responseText) {
-      console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+      logger.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
     });
   });
 
@@ -222,7 +223,7 @@ function processTransitEvents(events) {
     pinCount++;
 
     timeline.insertUserPin(pin, function(responseText) {
-      console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+      logger.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
     });
   });
 
@@ -246,7 +247,7 @@ function processEclipseEvents(events) {
     pinCount++;
 
     timeline.insertUserPin(pin, function(responseText) {
-      console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+      logger.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
     });
   });
 
@@ -270,7 +271,7 @@ function processLunarApsisEvents(events) {
     pinCount++;
 
     timeline.insertUserPin(pin, function(responseText) {
-      console.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
+      logger.log('Pushed ' + pin.layout.title + ' pin: ' + responseText);
     });
   });
 

@@ -259,7 +259,6 @@ function buildSeasonalPin(event) {
   var style = EVENT_STYLES[styleKey];
 
   var title = formatSeasonalTitle(event.type);
-  var subtitle = event.year.toString();
   var pinId = generateEventPinId(event, 'seasonal');
 
   return {
@@ -271,7 +270,6 @@ function buildSeasonalPin(event) {
       secondaryColor: style.foregroundColor,
       backgroundColor: style.backgroundColor,
       title: title,
-      subtitle: subtitle,
       tinyIcon: "system://images/" + style.tinyIcon,
       lastUpdated: generateTimestamp()
     },
@@ -316,7 +314,7 @@ function buildTransitPin(event) {
 function buildEclipsePin(event) {
   var style = EVENT_STYLES.eclipse;
 
-  var title = capitalizeFirst(event.kind) + ' ' + event.type + ' Eclipse';
+  var title = capitalizeFirst(event.kind) + ' ' + capitalizeFirst(event.type) + ' Eclipse';
   var pinId = generateEventPinId(event, 'eclipse');
 
   var pin = {

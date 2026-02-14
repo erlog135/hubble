@@ -7,6 +7,7 @@ var PinPusher = require('./pinpusher');
 var Clay = require('@rebble/clay');
 var clayConfig = require('./config');
 var Keys = require('message_keys');
+var logger = require('./logger');
 var clay = new Clay(clayConfig);
 
 var activeObserver = null;
@@ -14,7 +15,7 @@ var activeObserver = null;
 // Handle messages from the watch - single listener for all message types
 Pebble.addEventListener('appmessage', function(e) {
   var payload = e && e.payload ? e.payload : {};
-  console.log('Received payload: ' + JSON.stringify(payload));
+  logger.log('Received payload: ' + JSON.stringify(payload));
 
   // Try body request handler first (if observer is available)
   if (activeObserver) {
@@ -26,10 +27,10 @@ Pebble.addEventListener('appmessage', function(e) {
 
   // Handle declination request
   if (payload.hasOwnProperty("REQUEST_DECLINATION")) {
-    console.log('Received REQUEST_DECLINATION');
+    logger.log('Received REQUEST_DECLINATION');
     
     if (!activeObserver) {
-      console.log('No active observer, cannot calculate declination');
+      logger.log('No active observer, cannot calculate declination');
       return;
     }
     
@@ -38,27 +39,27 @@ Pebble.addEventListener('appmessage', function(e) {
       if (declination !== null) {
         Declination.sendMagneticDeclination(declination);
       } else {
-        console.log('Failed to calculate magnetic declination');
+        logger.log('Failed to calculate magnetic declination');
       }
     } catch (error) {
-      console.log('Error handling declination request:', error);
+      logger.log('Error handling declination request:', error);
     }
     return;
   }
 
   // Handle events refresh
   if (payload.hasOwnProperty("REQUEST_EVENTS_REFRESH")) {
-    console.log('Received REQUEST_EVENTS_REFRESH');
+    logger.log('Received REQUEST_EVENTS_REFRESH');
 
     if (!activeObserver) {
-      console.log('No active observer, sending error');
+      logger.log('No active observer, sending error');
       Pebble.sendAppMessage(
         { 'EVENTS_REFRESHED': -1 },
         function() {
-          console.log('Sent events refresh error response');
+          logger.log('Sent events refresh error response');
         },
         function(err) {
-          console.log('Failed to send events refresh error: ' + JSON.stringify(err));
+          logger.log('Failed to send events refresh error: ' + JSON.stringify(err));
         }
       );
       return;
@@ -71,14 +72,14 @@ Pebble.addEventListener('appmessage', function(e) {
       try {
         claySettings = JSON.parse(claySettingsString);
       } catch (e) {
-        console.log('Error parsing clay settings:', e);
+        logger.log('Error parsing clay settings:', e);
         Pebble.sendAppMessage(
           { 'EVENTS_REFRESHED': -1 },
           function() {
-            console.log('Sent events refresh error response');
+            logger.log('Sent events refresh error response');
           },
           function(err) {
-            console.log('Failed to send events refresh error: ' + JSON.stringify(err));
+            logger.log('Failed to send events refresh error: ' + JSON.stringify(err));
           }
         );
         return;
@@ -91,25 +92,25 @@ Pebble.addEventListener('appmessage', function(e) {
       var today = new Date();
       today.setHours(0, 0, 0, 0);
       var eventCount = PinPusher.pushAstronomyEvents(activeObserver, today, claySettings);
-      console.log('Pushed ' + eventCount + ' events to timeline');
+      logger.log('Pushed ' + eventCount + ' events to timeline');
       Pebble.sendAppMessage(
         { 'EVENTS_REFRESHED': eventCount },
         function() {
-          console.log('Sent events refresh success response with count: ' + eventCount);
+          logger.log('Sent events refresh success response with count: ' + eventCount);
         },
         function(err) {
-          console.log('Failed to send events refresh success: ' + JSON.stringify(err));
+          logger.log('Failed to send events refresh success: ' + JSON.stringify(err));
         }
       );
     } catch (error) {
-      console.log('Error pushing events:', error);
+      logger.log('Error pushing events:', error);
       Pebble.sendAppMessage(
         { 'EVENTS_REFRESHED': -1 },
         function() {
-          console.log('Sent events refresh error response');
+          logger.log('Sent events refresh error response');
         },
         function(err) {
-          console.log('Failed to send events refresh error: ' + JSON.stringify(err));
+          logger.log('Failed to send events refresh error: ' + JSON.stringify(err));
         }
       );
     }
@@ -117,7 +118,7 @@ Pebble.addEventListener('appmessage', function(e) {
 });
 
 Pebble.addEventListener('ready', function() {
-  console.log('PebbleKit JS ready!');
+  logger.log('PebbleKit JS ready!');
 
   // Get current clay settings
   var claySettingsString = localStorage.getItem('clay-settings');
@@ -126,22 +127,22 @@ Pebble.addEventListener('ready', function() {
     try {
       claySettings = JSON.parse(claySettingsString);
     } catch (e) {
-      console.log('Error parsing clay settings:', e);
+      logger.log('Error parsing clay settings:', e);
     }
   }
-  console.log('Current clay settings:', JSON.stringify(claySettings));
+  logger.log('Current clay settings:', JSON.stringify(claySettings));
 
   // PinPusher.pushTestPin();
   // PinPusher.deleteTestPin();
 
   Observer.initObserver().then(function(observer) {
     activeObserver = observer;
-    console.log('Observer ready (lat=' + observer.latitude +
+    logger.log('Observer ready (lat=' + observer.latitude +
       ', lon=' + observer.longitude + ', h=' + observer.height + ')');
 
      
     }).catch(function(err) {
-      console.log('Proceeding without observer: ' + err.message);
+      logger.log('Proceeding without observer: ' + err.message);
 
       });
       

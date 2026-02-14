@@ -2,6 +2,8 @@
  * Cache management for pin pushing to avoid unnecessary recalculations
  */
 
+var logger = require('../logger');
+
 // Persistent storage keys (separate from Clay's 'clay-settings')
 var STORAGE_KEY_LAST_SETTINGS = 'pinpusher-last-pin-push-settings';
 var STORAGE_KEY_LAST_TIME = 'pinpusher-last-pin-push-time';
@@ -16,7 +18,7 @@ function safeLocalStorageGet(key) {
     if (typeof localStorage === 'undefined' || !localStorage) return null;
     return localStorage.getItem(key);
   } catch (e) {
-    console.log('Pinpusher cache: localStorage.getItem failed for', key, e);
+    logger.log('Pinpusher cache: localStorage.getItem failed for', key, e);
     return null;
   }
 }
@@ -27,7 +29,7 @@ function safeLocalStorageSet(key, value) {
     localStorage.setItem(key, value);
     return true;
   } catch (e) {
-    console.log('Pinpusher cache: localStorage.setItem failed for', key, e);
+    logger.log('Pinpusher cache: localStorage.setItem failed for', key, e);
     return false;
   }
 }
@@ -38,7 +40,7 @@ function safeLocalStorageRemove(key) {
     localStorage.removeItem(key);
     return true;
   } catch (e) {
-    console.log('Pinpusher cache: localStorage.removeItem failed for', key, e);
+    logger.log('Pinpusher cache: localStorage.removeItem failed for', key, e);
     return false;
   }
 }
@@ -63,12 +65,12 @@ function hydrateCacheFromStorage() {
         lastPinPushSettings = parsedSettings;
       }
     } catch (e) {
-      console.log('Pinpusher cache: failed to parse stored settings', e);
+      logger.log('Pinpusher cache: failed to parse stored settings', e);
     }
   }
 
   if (lastPinPushTime || lastPinPushSettings) {
-    console.log('Pinpusher cache hydrated from localStorage (time=' + lastPinPushTime + ')');
+    logger.log('Pinpusher cache hydrated from localStorage (time=' + lastPinPushTime + ')');
   }
 }
 
@@ -121,17 +123,17 @@ function shouldSkipPinPush(settings) {
   var now = new Date().getTime();
   var settingsUnchanged = areSettingsEqual(lastPinPushSettings, settings);
 
-  console.log('Cache check - Settings unchanged:', settingsUnchanged);
-  console.log('Cache check - Time since last push:', (now - lastPinPushTime) / 1000, 'seconds');
-  console.log('Cache check - Cache duration:', PIN_PUSH_CACHE_DURATION_MS / 1000, 'seconds');
+  logger.log('Cache check - Settings unchanged:', settingsUnchanged);
+  logger.log('Cache check - Time since last push:', (now - lastPinPushTime) / 1000, 'seconds');
+  logger.log('Cache check - Cache duration:', PIN_PUSH_CACHE_DURATION_MS / 1000, 'seconds');
 
   // Check if settings haven't changed and cache is still valid
   if (settingsUnchanged && (now - lastPinPushTime) < PIN_PUSH_CACHE_DURATION_MS) {
-    console.log('Skipping pin push - cache still valid (settings unchanged, < 30min old)');
+    logger.log('Skipping pin push - cache still valid (settings unchanged, < 30min old)');
     return { shouldSkip: true };
   }
 
-  console.log('Proceeding with pin push - cache expired or settings changed');
+  logger.log('Proceeding with pin push - cache expired or settings changed');
   return { shouldSkip: false };
 }
 
@@ -142,14 +144,14 @@ function shouldSkipPinPush(settings) {
 function updatePinPushCache(settings) {
   lastPinPushTime = new Date().getTime();
   lastPinPushSettings = JSON.parse(JSON.stringify(settings)); // Deep copy
-  console.log('Updated pin push cache at:', new Date(lastPinPushTime).toISOString());
+  logger.log('Updated pin push cache at:', new Date(lastPinPushTime).toISOString());
 
   // Persist for comparisons across PKJS restarts
   safeLocalStorageSet(STORAGE_KEY_LAST_TIME, String(lastPinPushTime));
   try {
     safeLocalStorageSet(STORAGE_KEY_LAST_SETTINGS, JSON.stringify(lastPinPushSettings));
   } catch (e) {
-    console.log('Pinpusher cache: failed to stringify settings for storage', e);
+    logger.log('Pinpusher cache: failed to stringify settings for storage', e);
   }
 }
 
@@ -167,7 +169,7 @@ function getLastSettings() {
 function resetCache() {
   lastPinPushTime = 0;
   lastPinPushSettings = null;
-  console.log('Pin push cache reset');
+  logger.log('Pin push cache reset');
 
   safeLocalStorageRemove(STORAGE_KEY_LAST_TIME);
   safeLocalStorageRemove(STORAGE_KEY_LAST_SETTINGS);

@@ -1,9 +1,10 @@
 var Keys = require('message_keys');
 var geomagnetism = require('geomagnetism');
+var logger = require('./logger');
 
 function getMagneticDeclination(observer, date) {
   if (!observer || !observer.latitude || !observer.longitude) {
-    console.log('Cannot calculate magnetic declination: invalid observer');
+    logger.log('Cannot calculate magnetic declination: invalid observer');
     return null;
   }
 
@@ -23,19 +24,19 @@ function getMagneticDeclination(observer, date) {
 
     var magneticInfo = model.point(location);
 
-    console.log('Magnetic declination at (' + observer.latitude + ', ' + observer.longitude +
+    logger.log('Magnetic declination at (' + observer.latitude + ', ' + observer.longitude +
       '): ' + magneticInfo.decl + ' degrees');
 
     return magneticInfo.decl;
   } catch (err) {
-    console.log('Error calculating magnetic declination: ' + err.message);
+    logger.log('Error calculating magnetic declination: ' + err.message);
     return null;
   }
 }
 
 function sendMagneticDeclination(declination) {
   if (declination === null) {
-    console.log('Not sending magnetic declination: value is null');
+    logger.log('Not sending magnetic declination: value is null');
     return;
   }
 
@@ -49,10 +50,10 @@ function sendMagneticDeclination(declination) {
       return dict;
     })(),
     function() {
-      console.log('Sent magnetic declination: ' + declinationRounded + ' degrees');
+      logger.log('Sent magnetic declination: ' + declinationRounded + ' degrees');
     },
     function(err) {
-      console.log('Failed to send magnetic declination: ' + JSON.stringify(err));
+      logger.log('Failed to send magnetic declination: ' + JSON.stringify(err));
     }
   );
 }
