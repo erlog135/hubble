@@ -36,7 +36,6 @@ static void prv_menu_select_callback(int index, void *context) {
 }
 
 static void prv_window_load(Window *window) {
-  const Layout *layout = layout_get();
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
 
@@ -75,8 +74,8 @@ static void prv_window_load(Window *window) {
     s_menu_layer = simple_menu_layer_create(menu_frame, window, s_menu_sections,
                                            ARRAY_LENGTH(s_menu_sections), NULL);
     MenuLayer *menu_layer = simple_menu_layer_get_menu_layer(s_menu_layer);
-    menu_layer_set_normal_colors(menu_layer, layout->background, layout->foreground);
-    menu_layer_set_highlight_colors(menu_layer, layout->highlight, layout->highlight_foreground);
+    menu_layer_set_normal_colors(menu_layer, LAYOUT_BACKGROUND, LAYOUT_FOREGROUND);
+    menu_layer_set_highlight_colors(menu_layer, LAYOUT_HIGHLIGHT, LAYOUT_HIGHLIGHT_FG);
     layer_add_child(window_layer, simple_menu_layer_get_layer(s_menu_layer));
   } else {
     // Show "No favorites yet" text
@@ -84,8 +83,8 @@ static void prv_window_load(Window *window) {
                                    bounds.size.w - 20, bounds.size.h - 20);
     s_text_layer = text_layer_create(text_frame);
     text_layer_set_text(s_text_layer, "\n\n\nNo favorites yet");
-    text_layer_set_text_color(s_text_layer, layout->foreground);
-    text_layer_set_background_color(s_text_layer, layout->background);
+    text_layer_set_text_color(s_text_layer, LAYOUT_FOREGROUND);
+    text_layer_set_background_color(s_text_layer, LAYOUT_BACKGROUND);
     text_layer_set_text_alignment(s_text_layer, GTextAlignmentCenter);
     text_layer_set_font(s_text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
     layer_add_child(window_layer, text_layer_get_layer(s_text_layer));
@@ -117,7 +116,7 @@ void favorites_init(void) {
   }
 
   s_window = window_create();
-  window_set_background_color(s_window, layout_get()->background);
+  window_set_background_color(s_window, LAYOUT_BACKGROUND);
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = prv_window_load,
     .unload = prv_window_unload,

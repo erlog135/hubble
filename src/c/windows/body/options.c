@@ -95,7 +95,6 @@ void options_menu_show(void) {
     return;
   }
 
-  const Layout *layout = layout_get();
   s_root = action_menu_level_create(3);
   action_menu_level_add_action(s_root, "Locate", prv_on_locate, NULL);
   action_menu_level_add_action(s_root, "Refresh", prv_on_refresh, NULL);
@@ -111,8 +110,8 @@ void options_menu_show(void) {
   ActionMenuConfig config = (ActionMenuConfig){
       .root_level = s_root,
       .colors = {
-          .background = layout->highlight,
-          .foreground = layout->highlight_foreground,
+          .background = LAYOUT_HIGHLIGHT,
+          .foreground = LAYOUT_HIGHLIGHT_FG,
       },
       .did_close = prv_on_close,
   };

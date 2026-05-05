@@ -17,6 +17,13 @@
 #define GRID_ROW_HEIGHT 22
 #define CORNER_LABEL_PADDING_RECT 0
 #define CORNER_LABEL_PADDING_ROUND 20
+#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
+#define CORNER_LABEL_FONT_KEY FONT_KEY_GOTHIC_24
+#define CORNER_LABEL_HEIGHT 28
+#else
+#define CORNER_LABEL_FONT_KEY PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_14, FONT_KEY_GOTHIC_18)
+#define CORNER_LABEL_HEIGHT PBL_IF_ROUND_ELSE(18, 21)
+#endif
 
 static Window *s_window;
 static Layer *s_crosshair_layer;
@@ -301,12 +308,11 @@ static void prv_create_grid(TextLayer *grid[GRID_ROWS][GRID_COLS], Layer *parent
 }
 
 static void prv_window_load(Window *window) {
-  const Layout *layout = layout_get();
   Layer *window_layer = window_get_root_layer(window);
-  const GRect bounds = layer_get_bounds(window_layer);
+  const GRect bounds = layer_get_unobstructed_bounds(window_layer);
 
   s_status_layer = status_bar_layer_create();
-  status_bar_layer_set_colors(s_status_layer, layout->background, layout->foreground);
+  status_bar_layer_set_colors(s_status_layer, LAYOUT_BACKGROUND, LAYOUT_FOREGROUND);
   layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
 
   const GRect content_bounds =
@@ -330,17 +336,10 @@ static void prv_window_load(Window *window) {
 
   // Use corner-based layout with edge padding
   const int16_t padding = PBL_IF_ROUND_ELSE(CORNER_LABEL_PADDING_ROUND, CORNER_LABEL_PADDING_RECT);
-  
-  #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
-    char *font_key = FONT_KEY_GOTHIC_24;
-    const int16_t label_height = 28;
-  #else
-    char *font_key = PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_14, FONT_KEY_GOTHIC_18);
-    const int16_t label_height = PBL_IF_ROUND_ELSE(18, 21);
-  #endif
 
   const int16_t label_width = content_bounds.size.w / 2;
-  const GFont corner_font = fonts_get_system_font(font_key);
+  const int16_t label_height = CORNER_LABEL_HEIGHT;
+  const GFont corner_font = fonts_get_system_font(CORNER_LABEL_FONT_KEY);
   
   // Top-left corner: "Alt" label and value
   const int16_t tl_x = content_bounds.origin.x + padding;
@@ -348,15 +347,16 @@ static void prv_window_load(Window *window) {
   s_target_grid[0][0] = text_layer_create(GRect(tl_x, tl_y, label_width, label_height));
   text_layer_set_text(s_target_grid[0][0], "Alt");
   text_layer_set_background_color(s_target_grid[0][0], GColorClear);
-  text_layer_set_text_color(s_target_grid[0][0], layout->foreground);
+  text_layer_set_text_color(s_target_grid[0][0], LAYOUT_FOREGROUND);
   text_layer_set_font(s_target_grid[0][0], corner_font);
   text_layer_set_text_alignment(s_target_grid[0][0], GTextAlignmentCenter); 
   layer_add_child(window_layer, text_layer_get_layer(s_target_grid[0][0]));
   
-  s_target_grid[1][0] = text_layer_create(GRect(tl_x, tl_y + label_height, label_width, label_height));
+  s_target_grid[1][0] = text_layer_create(
+      GRect(tl_x, tl_y + label_height - FONT_GLYPH_TOP_OFFSET, label_width, label_height));
   text_layer_set_text(s_target_grid[1][0], "");
   text_layer_set_background_color(s_target_grid[1][0], GColorClear);
-  text_layer_set_text_color(s_target_grid[1][0], layout->foreground);
+  text_layer_set_text_color(s_target_grid[1][0], LAYOUT_FOREGROUND);
   text_layer_set_font(s_target_grid[1][0], corner_font);
   text_layer_set_text_alignment(s_target_grid[1][0], GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(s_target_grid[1][0]));
@@ -367,15 +367,16 @@ static void prv_window_load(Window *window) {
   s_target_grid[0][1] = text_layer_create(GRect(tr_x, tr_y, label_width, label_height));
   text_layer_set_text(s_target_grid[0][1], "Az");
   text_layer_set_background_color(s_target_grid[0][1], GColorClear);
-  text_layer_set_text_color(s_target_grid[0][1], layout->foreground);
+  text_layer_set_text_color(s_target_grid[0][1], LAYOUT_FOREGROUND);
   text_layer_set_font(s_target_grid[0][1], corner_font);
   text_layer_set_text_alignment(s_target_grid[0][1], GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(s_target_grid[0][1]));
   
-  s_target_grid[1][1] = text_layer_create(GRect(tr_x, tr_y + label_height, label_width, label_height));
+  s_target_grid[1][1] = text_layer_create(
+      GRect(tr_x, tr_y + label_height - FONT_GLYPH_TOP_OFFSET, label_width, label_height));
   text_layer_set_text(s_target_grid[1][1], "");
   text_layer_set_background_color(s_target_grid[1][1], GColorClear);
-  text_layer_set_text_color(s_target_grid[1][1], layout->foreground);
+  text_layer_set_text_color(s_target_grid[1][1], LAYOUT_FOREGROUND);
   text_layer_set_font(s_target_grid[1][1], corner_font);
   text_layer_set_text_alignment(s_target_grid[1][1], GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(s_target_grid[1][1]));
@@ -386,15 +387,16 @@ static void prv_window_load(Window *window) {
   s_current_grid[0][0] = text_layer_create(GRect(bl_x, bl_y, label_width, label_height));
   text_layer_set_text(s_current_grid[0][0], "My Alt");
   text_layer_set_background_color(s_current_grid[0][0], GColorClear);
-  text_layer_set_text_color(s_current_grid[0][0], layout->foreground);
+  text_layer_set_text_color(s_current_grid[0][0], LAYOUT_FOREGROUND);
   text_layer_set_font(s_current_grid[0][0], corner_font);
   text_layer_set_text_alignment(s_current_grid[0][0], GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(s_current_grid[0][0]));
   
-  s_current_grid[1][0] = text_layer_create(GRect(bl_x, bl_y + label_height, label_width, label_height));
+  s_current_grid[1][0] = text_layer_create(
+      GRect(bl_x, bl_y + label_height - FONT_GLYPH_TOP_OFFSET, label_width, label_height));
   text_layer_set_text(s_current_grid[1][0], "");
   text_layer_set_background_color(s_current_grid[1][0], GColorClear);
-  text_layer_set_text_color(s_current_grid[1][0], layout->foreground);
+  text_layer_set_text_color(s_current_grid[1][0], LAYOUT_FOREGROUND);
   text_layer_set_font(s_current_grid[1][0], corner_font);
   text_layer_set_text_alignment(s_current_grid[1][0], GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(s_current_grid[1][0]));
@@ -406,15 +408,16 @@ static void prv_window_load(Window *window) {
   s_current_grid[0][1] = text_layer_create(GRect(br_x, br_y, label_width, label_height));
   text_layer_set_text(s_current_grid[0][1], "My Az");
   text_layer_set_background_color(s_current_grid[0][1], GColorClear);
-  text_layer_set_text_color(s_current_grid[0][1], layout->foreground);
+  text_layer_set_text_color(s_current_grid[0][1], LAYOUT_FOREGROUND);
   text_layer_set_font(s_current_grid[0][1], corner_font);
   text_layer_set_text_alignment(s_current_grid[0][1], GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(s_current_grid[0][1]));
   
-  s_current_grid[1][1] = text_layer_create(GRect(br_x, br_y + label_height, label_width, label_height));
+  s_current_grid[1][1] = text_layer_create(
+      GRect(br_x, br_y + label_height - FONT_GLYPH_TOP_OFFSET, label_width, label_height));
   text_layer_set_text(s_current_grid[1][1], "");
   text_layer_set_background_color(s_current_grid[1][1], GColorClear);
-  text_layer_set_text_color(s_current_grid[1][1], layout->foreground);
+  text_layer_set_text_color(s_current_grid[1][1], LAYOUT_FOREGROUND);
   text_layer_set_font(s_current_grid[1][1], corner_font);
   text_layer_set_text_alignment(s_current_grid[1][1], GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(s_current_grid[1][1]));
@@ -425,8 +428,8 @@ static void prv_window_load(Window *window) {
 
   // Calibration message layer (shown when compass needs calibration)
   s_calibration_layer = text_layer_create(content_bounds);
-  text_layer_set_background_color(s_calibration_layer, GColorBlack);
-  text_layer_set_text_color(s_calibration_layer, GColorWhite);
+  text_layer_set_background_color(s_calibration_layer, LAYOUT_BACKGROUND);
+  text_layer_set_text_color(s_calibration_layer, LAYOUT_FOREGROUND);
   text_layer_set_font(s_calibration_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text(s_calibration_layer, "\n\nDo a figure-8\nwith your watch\nto calibrate");
   text_layer_set_text_alignment(s_calibration_layer, GTextAlignmentCenter);
@@ -514,7 +517,7 @@ void locator_init(void) {
   }
 
   s_window = window_create();
-  window_set_background_color(s_window, GColorBlack);
+  window_set_background_color(s_window, LAYOUT_BACKGROUND);
   window_set_window_handlers(s_window, (WindowHandlers){
                                     .load = prv_window_load,
                                     .unload = prv_window_unload,

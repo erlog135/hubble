@@ -47,15 +47,13 @@ static void prv_request_events_refresh(void) {
 }
 
 static void prv_window_load(Window *window) {
-  const Layout *layout = layout_get();
-
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
 
   // Create text layer
   s_text_layer = text_layer_create(bounds);
-  text_layer_set_background_color(s_text_layer, layout->background);
-  text_layer_set_text_color(s_text_layer, layout->foreground);
+  text_layer_set_background_color(s_text_layer, LAYOUT_BACKGROUND);
+  text_layer_set_text_color(s_text_layer, LAYOUT_FOREGROUND);
   text_layer_set_text(s_text_layer, "\n\n\nEvents");
   text_layer_set_font(s_text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(s_text_layer, GTextAlignmentCenter);
@@ -130,7 +128,7 @@ void events_init(void) {
   app_message_register_outbox_failed(prv_outbox_failed_callback);
 
   s_window = window_create();
-  window_set_background_color(s_window, layout_get()->background);
+  window_set_background_color(s_window, LAYOUT_BACKGROUND);
   window_set_window_handlers(s_window, (WindowHandlers){
                                     .load = prv_window_load,
                                     .appear = prv_window_appear,

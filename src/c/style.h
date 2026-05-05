@@ -2,12 +2,10 @@
 
 #include <pebble.h>
 
-typedef struct {
-  GColor background;
-  GColor foreground;
-  GColor highlight;
-  GColor highlight_foreground;
-} Layout;
+#define LAYOUT_BACKGROUND GColorBlack
+#define LAYOUT_FOREGROUND GColorWhite
+#define LAYOUT_HIGHLIGHT PBL_IF_COLOR_ELSE(GColorVividViolet, GColorWhite)
+#define LAYOUT_HIGHLIGHT_FG PBL_IF_COLOR_ELSE(GColorWhite, GColorBlack)
 
-// Returns app-wide layout colors. Always returns the same instance.
-const Layout *layout_get(void);
+// Pebble system fonts have an implicit top glyph offset inside layer bounds.
+#define FONT_GLYPH_TOP_OFFSET 3

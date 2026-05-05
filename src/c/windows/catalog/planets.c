@@ -28,8 +28,6 @@ static void prv_menu_select_callback(int index, void *context) {
 }
 
 static void prv_window_load(Window *window) {
-  const Layout *layout = layout_get();
-
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
 
@@ -52,8 +50,8 @@ static void prv_window_load(Window *window) {
   s_menu_layer = simple_menu_layer_create(menu_frame, window, s_menu_sections,
                                           ARRAY_LENGTH(s_menu_sections), NULL);
   MenuLayer *menu_layer = simple_menu_layer_get_menu_layer(s_menu_layer);
-  menu_layer_set_normal_colors(menu_layer, layout->background, layout->foreground);
-  menu_layer_set_highlight_colors(menu_layer, layout->highlight, layout->highlight_foreground);
+  menu_layer_set_normal_colors(menu_layer, LAYOUT_BACKGROUND, LAYOUT_FOREGROUND);
+  menu_layer_set_highlight_colors(menu_layer, LAYOUT_HIGHLIGHT, LAYOUT_HIGHLIGHT_FG);
   layer_add_child(window_layer, simple_menu_layer_get_layer(s_menu_layer));
 }
 
@@ -68,7 +66,7 @@ void planets_menu_init(void) {
   }
 
   s_window = window_create();
-  window_set_background_color(s_window, layout_get()->background);
+  window_set_background_color(s_window, LAYOUT_BACKGROUND);
   window_set_window_handlers(s_window, (WindowHandlers){
                                     .load = prv_window_load,
                                     .unload = prv_window_unload,

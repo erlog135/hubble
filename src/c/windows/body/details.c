@@ -33,13 +33,13 @@
 #define LONG_TEXT_SIDE_MARGIN PBL_IF_ROUND_ELSE(0, 4)
 
 #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
-  char *title_font_key = FONT_KEY_GOTHIC_24_BOLD;
-  char *grid_font_key = FONT_KEY_GOTHIC_24_BOLD;
-  char *detail_font_key = FONT_KEY_GOTHIC_24;
+#define TITLE_FONT_KEY FONT_KEY_GOTHIC_24_BOLD
+#define GRID_FONT_KEY FONT_KEY_GOTHIC_24_BOLD
+#define DETAIL_FONT_KEY FONT_KEY_GOTHIC_24
 #else
-  char *title_font_key = FONT_KEY_GOTHIC_18_BOLD;
-  char *grid_font_key = PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_14_BOLD);
-  char *detail_font_key = FONT_KEY_GOTHIC_18;
+#define TITLE_FONT_KEY FONT_KEY_GOTHIC_18_BOLD
+#define GRID_FONT_KEY PBL_IF_ROUND_ELSE(FONT_KEY_GOTHIC_18, FONT_KEY_GOTHIC_14_BOLD)
+#define DETAIL_FONT_KEY FONT_KEY_GOTHIC_18
 #endif
 
 static Window *s_window;
@@ -335,7 +335,7 @@ static void prv_create_grid_layers(GRect bounds, GFont font) {
       s_grid_layers[row][col] = text_layer_create(frame);
       text_layer_set_text(s_grid_layers[row][col], grid_text[row][col]);
       text_layer_set_background_color(s_grid_layers[row][col], GColorClear);
-      text_layer_set_text_color(s_grid_layers[row][col], layout_get()->foreground);
+      text_layer_set_text_color(s_grid_layers[row][col], LAYOUT_FOREGROUND);
       text_layer_set_font(s_grid_layers[row][col], font);
       text_layer_set_overflow_mode(s_grid_layers[row][col], GTextOverflowModeWordWrap);
       text_layer_set_text_alignment(s_grid_layers[row][col],GTextAlignmentCenter);
@@ -349,13 +349,12 @@ static void prv_create_grid_layers(GRect bounds, GFont font) {
 }
 
 static void prv_window_load(Window *window) {
-  const Layout *layout = layout_get();
   Layer *window_layer = window_get_root_layer(window);
-  const GRect bounds = layer_get_bounds(window_layer);
+  const GRect bounds = layer_get_unobstructed_bounds(window_layer);
   s_page_height = bounds.size.h;
 
   s_status_layer = status_bar_layer_create();
-  status_bar_layer_set_colors(s_status_layer, layout->background, layout->foreground);
+  status_bar_layer_set_colors(s_status_layer, LAYOUT_BACKGROUND, LAYOUT_FOREGROUND);
   layer_add_child(window_layer, status_bar_layer_get_layer(s_status_layer));
 
   // Create action indicator (initially hidden during loading)
@@ -412,12 +411,12 @@ static void prv_window_load(Window *window) {
   s_title_layer = text_layer_create(title_frame);
   text_layer_set_text(s_title_layer, s_content.title_text);
   text_layer_set_background_color(s_title_layer, GColorClear);
-  text_layer_set_text_color(s_title_layer, layout->foreground);
-  text_layer_set_font(s_title_layer, fonts_get_system_font(title_font_key));
+  text_layer_set_text_color(s_title_layer, LAYOUT_FOREGROUND);
+  text_layer_set_font(s_title_layer, fonts_get_system_font(TITLE_FONT_KEY));
   text_layer_set_text_alignment(s_title_layer, GTextAlignmentCenter);
   scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_title_layer));
 
-  y_cursor += title_frame.size.h + TITLE_BOTTOM_MARGIN;
+  y_cursor += title_frame.size.h + TITLE_BOTTOM_MARGIN - FONT_GLYPH_TOP_OFFSET;
 
   // Hero image
   s_pdc_image = NULL;
@@ -434,7 +433,12 @@ static void prv_window_load(Window *window) {
   const GSize hero_size = prv_get_image_size();
   const int16_t image_layer_height = hero_size.h + HERO_IMAGE_FRAME_PADDING;
 
-  if (PBL_IF_ROUND_ELSE(1, 0)) {
+#if defined(PBL_ROUND)
+    const int16_t top_quarter_center_y = bounds.size.h / 4;
+    const int16_t title_y = top_quarter_center_y - (FONT_HEIGHT / 2) - STATUS_BAR_LAYER_HEIGHT;
+    layer_set_frame(text_layer_get_layer(s_title_layer),
+                    GRect(side_margin, title_y, bounds.size.w - side_margin * 2, FONT_HEIGHT));
+
     // Round watch: grid columns on left and right of image, image centered in window (horizontally and vertically)
     // Use raw image dimensions (no padding) and full window dimensions (no status bar) for perfect centering
     const int16_t grid_row_height = GRID_ROW_HEIGHT;
@@ -474,8 +478,8 @@ static void prv_window_load(Window *window) {
         const char *text = (row == 0 ? s_content.grid_top_left : s_content.grid_bottom_left);
         text_layer_set_text(s_grid_layers[row][0], text);
         text_layer_set_background_color(s_grid_layers[row][0], GColorClear);
-        text_layer_set_text_color(s_grid_layers[row][0], layout->foreground);
-        text_layer_set_font(s_grid_layers[row][0], fonts_get_system_font(grid_font_key));
+        text_layer_set_text_color(s_grid_layers[row][0], LAYOUT_FOREGROUND);
+        text_layer_set_font(s_grid_layers[row][0], fonts_get_system_font(GRID_FONT_KEY));
         text_layer_set_overflow_mode(s_grid_layers[row][0], GTextOverflowModeWordWrap);
         text_layer_set_text_alignment(s_grid_layers[row][0], GTextAlignmentCenter);
         scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][0]));
@@ -500,8 +504,8 @@ static void prv_window_load(Window *window) {
         const char *text = (row == 0 ? s_content.grid_top_right : s_content.grid_bottom_right);
         text_layer_set_text(s_grid_layers[row][1], text);
         text_layer_set_background_color(s_grid_layers[row][1], GColorClear);
-        text_layer_set_text_color(s_grid_layers[row][1], layout->foreground);
-        text_layer_set_font(s_grid_layers[row][1], fonts_get_system_font(grid_font_key));
+        text_layer_set_text_color(s_grid_layers[row][1], LAYOUT_FOREGROUND);
+        text_layer_set_font(s_grid_layers[row][1], fonts_get_system_font(GRID_FONT_KEY));
         text_layer_set_overflow_mode(s_grid_layers[row][1], GTextOverflowModeWordWrap);
         text_layer_set_text_alignment(s_grid_layers[row][1], GTextAlignmentCenter);
         scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_grid_layers[row][1]));
@@ -513,7 +517,7 @@ static void prv_window_load(Window *window) {
     }
 
     y_cursor = image_layer_y + image_layer_height_round + HERO_IMAGE_BOTTOM_MARGIN;
-  } else {
+#else
     // Non-round watch: current layout (image, detail text, then grid)
     s_image_layer = layer_create(GRect(0, y_cursor, bounds.size.w, image_layer_height));
     layer_set_update_proc(s_image_layer, prv_draw_image);
@@ -525,35 +529,37 @@ static void prv_window_load(Window *window) {
     s_detail_layer = text_layer_create(detail_frame);
     text_layer_set_text(s_detail_layer, s_content.detail_text);
     text_layer_set_background_color(s_detail_layer, GColorClear);
-    text_layer_set_text_color(s_detail_layer, layout->foreground);
-    text_layer_set_font(s_detail_layer, fonts_get_system_font(detail_font_key));
+    text_layer_set_text_color(s_detail_layer, LAYOUT_FOREGROUND);
+    text_layer_set_font(s_detail_layer, fonts_get_system_font(DETAIL_FONT_KEY));
     text_layer_set_overflow_mode(s_detail_layer, GTextOverflowModeWordWrap);
     text_layer_set_text_alignment(s_detail_layer, GTextAlignmentCenter);
     scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_detail_layer));
 
-    y_cursor += detail_frame.size.h + DETAIL_BOTTOM_MARGIN;
+    y_cursor += detail_frame.size.h + DETAIL_BOTTOM_MARGIN - FONT_GLYPH_TOP_OFFSET;
 
     // Grid values (2x2)
     const GRect grid_bounds =
         GRect(0, y_cursor, bounds.size.w, GRID_ROW_HEIGHT * GRID_ROWS + GRID_MARGIN);
-    prv_create_grid_layers(grid_bounds, fonts_get_system_font(grid_font_key));
+    prv_create_grid_layers(grid_bounds, fonts_get_system_font(GRID_FONT_KEY));
     y_cursor += grid_bounds.size.h;
-  }
+#endif
 
   // Detail text (for round watches, placed after image)
-  if (PBL_IF_ROUND_ELSE(1, 0)) {
-    GRect detail_frame = GRect(side_margin, y_cursor, bounds.size.w - side_margin * 2, 21);
+#if defined(PBL_ROUND)
+    const int16_t bottom_quarter_center_y = (bounds.size.h * 3) / 4;
+    const int16_t detail_y = bottom_quarter_center_y - (FONT_HEIGHT / 2) - STATUS_BAR_LAYER_HEIGHT;
+    GRect detail_frame = GRect(side_margin, detail_y, bounds.size.w - side_margin * 2, FONT_HEIGHT);
     s_detail_layer = text_layer_create(detail_frame);
     text_layer_set_text(s_detail_layer, s_content.detail_text);
     text_layer_set_background_color(s_detail_layer, GColorClear);
-    text_layer_set_text_color(s_detail_layer, layout->foreground);
-    text_layer_set_font(s_detail_layer, fonts_get_system_font(detail_font_key));
+    text_layer_set_text_color(s_detail_layer, LAYOUT_FOREGROUND);
+    text_layer_set_font(s_detail_layer, fonts_get_system_font(DETAIL_FONT_KEY));
     text_layer_set_overflow_mode(s_detail_layer, GTextOverflowModeWordWrap);
     text_layer_set_text_alignment(s_detail_layer, GTextAlignmentCenter);
     scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_detail_layer));
 
-    y_cursor += detail_frame.size.h + DETAIL_BOTTOM_MARGIN;
-  }
+    y_cursor = detail_frame.origin.y + detail_frame.size.h + DETAIL_BOTTOM_MARGIN - FONT_GLYPH_TOP_OFFSET;
+#endif
 
   // Adjust spacing so first page ends at exactly scroll_bounds.size.h
   // The scrollable area height is bounds.size.h - STATUS_BAR_LAYER_HEIGHT
@@ -575,8 +581,8 @@ static void prv_window_load(Window *window) {
   s_long_text_layer = text_layer_create(long_frame);
   text_layer_set_text(s_long_text_layer, s_content.long_text);
   text_layer_set_background_color(s_long_text_layer, GColorClear);
-  text_layer_set_text_color(s_long_text_layer, layout->foreground);
-  text_layer_set_font(s_long_text_layer, fonts_get_system_font(detail_font_key));
+  text_layer_set_text_color(s_long_text_layer, LAYOUT_FOREGROUND);
+  text_layer_set_font(s_long_text_layer, fonts_get_system_font(DETAIL_FONT_KEY));
   text_layer_set_overflow_mode(s_long_text_layer, GTextOverflowModeWordWrap);
   text_layer_set_text_alignment(s_long_text_layer, PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentLeft));
   scroll_layer_add_child(s_scroll_layer, text_layer_get_layer(s_long_text_layer));
@@ -653,7 +659,7 @@ void details_init(void) {
   s_content = s_loading_content;
   s_is_loading = false;
   s_window = window_create();
-  window_set_background_color(s_window, layout_get()->background);
+  window_set_background_color(s_window, LAYOUT_BACKGROUND);
   window_set_window_handlers(s_window, (WindowHandlers){
                                         .load = prv_window_load,
                                         .unload = prv_window_unload,
