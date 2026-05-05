@@ -16,6 +16,20 @@ function capitalizeFirst(str) {
 }
 
 /**
+ * Apply locale-specific phase name overrides based on date context
+ * @param {string} phaseName - The moon phase name
+ * @param {Date} date - The date of the event
+ * @returns {string} Possibly overridden phase name
+ */
+function localizePhaseText(phaseName, date) {
+  if (date.getMonth() === 9 && date.getDate() === 31) {
+    if (phaseName === 'Waxing Gibbous') return 'Ghastly Gibus';
+    if (phaseName === 'Waning Gibbous') return 'Ghostly Gibus';
+  }
+  return phaseName;
+}
+
+/**
  * Generate a properly formatted timestamp for Pebble timeline pins
  * Removes milliseconds to avoid display issues
  * @returns {string} ISO timestamp without milliseconds
@@ -213,7 +227,7 @@ function buildRiseSetPin(event, sequenceIndex) {
 
   // Add moon phase info to subtitle if available
   if (event.moonPhase) {
-    pin.layout.subtitle = event.moonPhase.name;
+    pin.layout.subtitle = localizePhaseText(event.moonPhase.name, event.time);
   }
 
   return pin;

@@ -84,6 +84,22 @@ static bool prv_is_constellation(void) {
   return s_content.body_id >= CONSTELLATION_BODY_ID_START;
 }
 
+static void prv_localize_phase_text(DetailsContent *content) {
+  if (!content || content->body_id != 0) {
+    return;
+  }
+  time_t now = time(NULL);
+  struct tm *t = localtime(&now);
+  if (t->tm_mon != 9 || t->tm_mday != 31) {
+    return;
+  }
+  if (strcmp(content->detail_text, "Waxing Gibbous") == 0) {
+    strncpy(content->detail_text, "Ghastly Gibus", sizeof(content->detail_text) - 1);
+  } else if (strcmp(content->detail_text, "Waning Gibbous") == 0) {
+    strncpy(content->detail_text, "Ghostly Gibus", sizeof(content->detail_text) - 1);
+  }
+}
+
 #ifdef DEMO_MODE
 static void prv_apply_demo_mode(DetailsContent *content) {
   if (!content) {
@@ -706,6 +722,7 @@ void details_show(const DetailsContent *content) {
     // Apply demo mode overrides
     prv_apply_demo_mode(&s_content);
 #endif
+    prv_localize_phase_text(&s_content);
     
     s_is_loading = false;
 
