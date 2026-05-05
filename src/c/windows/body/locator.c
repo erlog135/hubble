@@ -25,6 +25,33 @@
 #define CORNER_LABEL_HEIGHT PBL_IF_ROUND_ELSE(18, 21)
 #endif
 
+// Tunable beep parameters for the alignment feedback tone (PBL_SPEAKER only).
+#define BEEP_FREQ_HZ 800
+#define BEEP_DURATION_MS 80
+#define BEEP_INTERVAL_MIN_MS 150
+#define BEEP_INTERVAL_MAX_MS 2000
+#define BEEP_ALIGNED_DEG 2
+#define BEEP_FAR_DEG 90
+#define BEEP_VOLUME 80
+#define BEEP_WAVEFORM SpeakerWaveformSquare
+#define BEEP_SUSTAINED_MS 9000
+
+typedef enum {
+  LightModeOff = 0,
+#if defined(PBL_RGB_BACKLIGHT)
+  LightModeOnRed,
+#endif
+  LightModeOnSystem,
+  LightModeCount,
+} LightMode;
+
+typedef enum {
+  ViewModeAzAlt = 0,
+  ViewModeAzOnly,
+  ViewModeAltOnly,
+  ViewModeCount,
+} ViewMode;
+
 static Window *s_window;
 static Layer *s_crosshair_layer;
 static TextLayer *s_target_grid[GRID_ROWS][GRID_COLS];
@@ -34,7 +61,22 @@ static StatusBarLayer *s_status_layer;
 static ActionBarLayer *s_action_bar;
 static GBitmap *s_icon_light_on;
 static GBitmap *s_icon_light_off;
-static bool s_light_enabled;
+#if defined(PBL_RGB_BACKLIGHT)
+static GBitmap *s_icon_light_on_red;
+#endif
+#if defined(PBL_COMPASS)
+static GBitmap *s_icon_track_az_alt;
+static GBitmap *s_icon_track_az;
+#endif
+static GBitmap *s_icon_track_alt;
+#if defined(PBL_SPEAKER)
+static GBitmap *s_icon_volume_mute;
+static GBitmap *s_icon_volume_unmute;
+static AppTimer *s_beep_timer;
+static bool s_sound_enabled;
+#endif
+static LightMode s_light_mode;
+static ViewMode s_view_mode;
 #ifdef DEMO_MODE
 static bool s_is_calibrated = true;  // Demo mode: Always calibrated
 #else
@@ -195,91 +237,363 @@ static void prv_update_labels(void) {
 #endif
 }
 
+static GBitmap *prv_icon_for_light_mode(LightMode mode) {
+  switch (mode) {
+#if defined(PBL_RGB_BACKLIGHT)
+    case LightModeOnRed:
+      return s_icon_light_on_red;
+#endif
+    case LightModeOnSystem:
+      return s_icon_light_on;
+    case LightModeOff:
+    default:
+      return s_icon_light_off;
+  }
+}
+
+#if defined(PBL_COMPASS)
+static GBitmap *prv_icon_for_view_mode(ViewMode mode) {
+  switch (mode) {
+    case ViewModeAzOnly:
+      return s_icon_track_az;
+    case ViewModeAltOnly:
+      return s_icon_track_alt;
+    case ViewModeAzAlt:
+    default:
+      return s_icon_track_az_alt;
+  }
+}
+#endif
+
 static void prv_update_action_icons(void) {
   if (!s_action_bar) {
     return;
   }
-  action_bar_layer_set_icon(s_action_bar, BUTTON_ID_UP,
-                            s_light_enabled ? s_icon_light_on : s_icon_light_off);
+  action_bar_layer_set_icon(s_action_bar, BUTTON_ID_UP, prv_icon_for_light_mode(s_light_mode));
+#if defined(PBL_COMPASS)
+  action_bar_layer_set_icon(s_action_bar, BUTTON_ID_SELECT, prv_icon_for_view_mode(s_view_mode));
+#endif
+#if defined(PBL_SPEAKER)
+  action_bar_layer_set_icon(s_action_bar, BUTTON_ID_DOWN,
+                            s_sound_enabled ? s_icon_volume_unmute : s_icon_volume_mute);
+#endif
 }
 
-static void prv_light_toggle_click_handler(ClickRecognizerRef recognizer, void *context) {
+static void prv_apply_light_mode(void) {
+  switch (s_light_mode) {
+    case LightModeOff:
+      light_enable(false);
+#if defined(PBL_RGB_BACKLIGHT)
+      light_set_system_color();
+#endif
+      break;
+#if defined(PBL_RGB_BACKLIGHT)
+    case LightModeOnRed:
+      light_set_color(GColorRed);
+      light_enable(true);
+      break;
+#endif
+    case LightModeOnSystem:
+#if defined(PBL_RGB_BACKLIGHT)
+      light_set_system_color();
+#endif
+      light_enable(true);
+      break;
+    default:
+      break;
+  }
+}
+
+static void prv_apply_view_mode(void) {
+  const bool hide_left = (s_view_mode == ViewModeAzOnly);
+#if defined(PBL_COMPASS)
+  // On compass platforms, AltOnly hides the right column entirely.
+  // On diorite (no compass), the right column shows only the target Az
+  // (no current Az), and we keep it visible to match the original layout.
+  const bool hide_right = (s_view_mode == ViewModeAltOnly);
+#endif
+
+  for (int row = 0; row < GRID_ROWS; ++row) {
+    if (s_target_grid[row][0]) {
+      layer_set_hidden(text_layer_get_layer(s_target_grid[row][0]), hide_left);
+    }
+    if (s_current_grid[row][0]) {
+      layer_set_hidden(text_layer_get_layer(s_current_grid[row][0]), hide_left);
+    }
+#if defined(PBL_COMPASS)
+    if (s_target_grid[row][1]) {
+      layer_set_hidden(text_layer_get_layer(s_target_grid[row][1]), hide_right);
+    }
+    if (s_current_grid[row][1]) {
+      layer_set_hidden(text_layer_get_layer(s_current_grid[row][1]), hide_right);
+    }
+#endif
+  }
+
+  if (s_crosshair_layer) {
+    layer_mark_dirty(s_crosshair_layer);
+  }
+}
+
+#if defined(PBL_SPEAKER)
+static void prv_beep_schedule_next(uint32_t delay_ms);
+
+static int16_t prv_alignment_delta_deg(void) {
+  const int16_t delta_alt_abs = (int16_t)abs(s_target.altitude_deg - s_current_altitude_deg);
+#if defined(PBL_COMPASS)
+  LocalSettings *settings = settings_get();
+  int16_t corrected_az = s_current_azimuth_deg;
+  if (settings->magnetic_declination != 255) {
+    corrected_az += settings->magnetic_declination;
+  }
+  const int16_t delta_az_abs =
+      (int16_t)abs(prv_normalize_azimuth_delta(s_target.azimuth_deg - corrected_az));
+  switch (s_view_mode) {
+    case ViewModeAzOnly:
+      return delta_az_abs;
+    case ViewModeAltOnly:
+      return delta_alt_abs;
+    case ViewModeAzAlt:
+    default:
+      return delta_alt_abs > delta_az_abs ? delta_alt_abs : delta_az_abs;
+  }
+#else
+  return delta_alt_abs;
+#endif
+}
+
+static uint32_t prv_beep_interval_for_delta(int16_t delta_deg) {
+  if (delta_deg <= BEEP_ALIGNED_DEG) {
+    return BEEP_INTERVAL_MIN_MS;
+  }
+  if (delta_deg >= BEEP_FAR_DEG) {
+    return BEEP_INTERVAL_MAX_MS;
+  }
+  const int32_t span_deg = BEEP_FAR_DEG - BEEP_ALIGNED_DEG;
+  const int32_t span_ms = BEEP_INTERVAL_MAX_MS - BEEP_INTERVAL_MIN_MS;
+  const int32_t offset = (int32_t)(delta_deg - BEEP_ALIGNED_DEG);
+  return (uint32_t)(BEEP_INTERVAL_MIN_MS + (offset * span_ms) / span_deg);
+}
+
+static void prv_beep_tick(void *context) {
+  (void)context;
+  s_beep_timer = NULL;
+  if (!s_sound_enabled || !s_window) {
+    return;
+  }
+
+  const int16_t delta = prv_alignment_delta_deg();
+  if (delta <= BEEP_ALIGNED_DEG) {
+    speaker_play_tone(BEEP_FREQ_HZ, BEEP_SUSTAINED_MS, BEEP_VOLUME, BEEP_WAVEFORM);
+    // Re-trigger slightly before the sustained tone ends to avoid an audible gap.
+    prv_beep_schedule_next(BEEP_SUSTAINED_MS - 100);
+  } else {
+    speaker_play_tone(BEEP_FREQ_HZ, BEEP_DURATION_MS, BEEP_VOLUME, BEEP_WAVEFORM);
+    prv_beep_schedule_next(prv_beep_interval_for_delta(delta));
+  }
+}
+
+static void prv_beep_schedule_next(uint32_t delay_ms) {
+  if (s_beep_timer) {
+    app_timer_cancel(s_beep_timer);
+    s_beep_timer = NULL;
+  }
+  s_beep_timer = app_timer_register(delay_ms, prv_beep_tick, NULL);
+}
+
+static void prv_beep_stop(void) {
+  if (s_beep_timer) {
+    app_timer_cancel(s_beep_timer);
+    s_beep_timer = NULL;
+  }
+  speaker_stop();
+}
+#endif  // PBL_SPEAKER
+
+static void prv_light_cycle_click_handler(ClickRecognizerRef recognizer, void *context) {
   (void)recognizer;
   (void)context;
-  s_light_enabled = !s_light_enabled;
-  light_enable(s_light_enabled);
+  s_light_mode = (LightMode)((s_light_mode + 1) % LightModeCount);
+  prv_apply_light_mode();
   prv_update_action_icons();
 }
 
+#if defined(PBL_COMPASS)
+static void prv_view_cycle_click_handler(ClickRecognizerRef recognizer, void *context) {
+  (void)recognizer;
+  (void)context;
+  s_view_mode = (ViewMode)((s_view_mode + 1) % ViewModeCount);
+  prv_apply_view_mode();
+  prv_update_action_icons();
+}
+#endif
+
+#if defined(PBL_SPEAKER)
+static void prv_sound_toggle_click_handler(ClickRecognizerRef recognizer, void *context) {
+  (void)recognizer;
+  (void)context;
+  s_sound_enabled = !s_sound_enabled;
+  if (s_sound_enabled) {
+    prv_beep_tick(NULL);
+  } else {
+    prv_beep_stop();
+  }
+  prv_update_action_icons();
+}
+#endif
+
 static void prv_click_config_provider(void *context) {
   (void)context;
-  window_single_click_subscribe(BUTTON_ID_UP, prv_light_toggle_click_handler);
+  window_single_click_subscribe(BUTTON_ID_UP, prv_light_cycle_click_handler);
+#if defined(PBL_COMPASS)
+  window_single_click_subscribe(BUTTON_ID_SELECT, prv_view_cycle_click_handler);
+#endif
+#if defined(PBL_SPEAKER)
+  window_single_click_subscribe(BUTTON_ID_DOWN, prv_sound_toggle_click_handler);
+#endif
 }
 
-static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
-  const GRect bounds = layer_get_bounds(layer);
+#if defined(PBL_COMPASS)
+static int16_t prv_corrected_current_azimuth(void) {
+  LocalSettings *settings = settings_get();
+  int16_t corrected = s_current_azimuth_deg;
+  if (settings->magnetic_declination != 255) {
+    corrected += settings->magnetic_declination;
+  }
+  return corrected;
+}
+#endif
+
+static void prv_draw_target_dot(GContext *ctx, GPoint pt, uint16_t target_radius) {
+  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_fill_circle(ctx, pt, target_radius);
+  graphics_context_set_stroke_color(ctx, GColorBlack);
+  graphics_draw_circle(ctx, pt, target_radius);
+}
+
+static int16_t prv_clamp_int16(int16_t v, int16_t lo, int16_t hi) {
+  if (v < lo) return lo;
+  if (v > hi) return hi;
+  return v;
+}
+
+static void prv_draw_az_alt(GContext *ctx, GRect bounds) {
   const GPoint center = grect_center_point(&bounds);
   const uint16_t radius = bounds.size.w < bounds.size.h ? bounds.size.w / 4 : bounds.size.h / 4;
 
   graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_context_set_fill_color(ctx, GColorBlack);
 
-#if defined(PBL_COMPASS)
-  // Concentric circles
   graphics_draw_circle(ctx, center, radius);
   graphics_draw_circle(ctx, center, radius / 2);
-#else
-  // Horizontal lines for watches without compass
-  // Longer lines at edges
-  graphics_draw_line(ctx, GPoint(bounds.origin.x, center.y - radius), GPoint(bounds.origin.x + bounds.size.w, center.y - radius));
-  graphics_draw_line(ctx, GPoint(bounds.origin.x, center.y + radius), GPoint(bounds.origin.x + bounds.size.w, center.y + radius));
-  // Shorter lines in middle
-  graphics_draw_line(ctx, GPoint(center.x - radius/2, center.y - radius/2), GPoint(center.x + radius/2, center.y - radius/2));
-  graphics_draw_line(ctx, GPoint(center.x - radius/2, center.y + radius/2), GPoint(center.x + radius/2, center.y + radius/2));
-#endif
 
-  // Crosshair lines
   graphics_draw_line(ctx, GPoint(center.x - radius, center.y), GPoint(center.x + radius, center.y));
   graphics_draw_line(ctx, GPoint(center.x, center.y - radius), GPoint(center.x, center.y + radius));
 
-  // Small center dot
   graphics_fill_circle(ctx, center, 2);
 
-  // Target indicator: offset from center by current vs. target deltas.
   const int16_t delta_alt = s_target.altitude_deg - s_current_altitude_deg;
 #if defined(PBL_COMPASS)
-  // Apply magnetic declination correction to current azimuth
-  LocalSettings *settings = settings_get();
-  int16_t corrected_current_azimuth = s_current_azimuth_deg;
-  
-  // Only apply magnetic declination if it's not the unset value (255)
-  if (settings->magnetic_declination != 255) {
-    corrected_current_azimuth += settings->magnetic_declination;
-  }
-  
-  const int16_t delta_az = prv_normalize_azimuth_delta(s_target.azimuth_deg - corrected_current_azimuth);
+  const int16_t delta_az =
+      prv_normalize_azimuth_delta(s_target.azimuth_deg - prv_corrected_current_azimuth());
+#else
+  const int16_t delta_az = 0;
 #endif
 
-  // Map degrees to pixels using the crosshair radius; clamp to stay on the reticle.
-  const int16_t max_span_deg = 90;  // map +/-90° to full radius
-#if defined(PBL_COMPASS)
+  const int16_t max_span_deg = 90;
   int16_t dx = (int16_t)((radius * delta_az) / max_span_deg);
-#else
-  int16_t dx = 0;
-#endif
-  int16_t dy = (int16_t)((-radius * delta_alt) / max_span_deg);  // negative to move up for positive altitude
-  if (dx > (int16_t)radius) dx = radius;
-  if (dx < -(int16_t)radius) dx = -(int16_t)radius;
-  if (dy > (int16_t)radius) dy = radius;
-  if (dy < -(int16_t)radius) dy = -(int16_t)radius;
+  int16_t dy = (int16_t)((-radius * delta_alt) / max_span_deg);
+  dx = prv_clamp_int16(dx, -(int16_t)radius, (int16_t)radius);
+  dy = prv_clamp_int16(dy, -(int16_t)radius, (int16_t)radius);
 
   const uint16_t target_radius = radius / 6 > 2 ? radius / 6 : 2;
-  GPoint target_center = GPoint(center.x + dx, center.y + dy);
+  prv_draw_target_dot(ctx, GPoint(center.x + dx, center.y + dy), target_radius);
+}
 
+#if defined(PBL_COMPASS)
+static void prv_draw_az_only(GContext *ctx, GRect bounds) {
+  const GPoint center = grect_center_point(&bounds);
+  const int16_t margin = 8;
+  const int16_t bar_left = bounds.origin.x + margin;
+  const int16_t bar_right = bounds.origin.x + bounds.size.w - margin;
+  const int16_t half_width = (bar_right - bar_left) / 2;
+  const int16_t y = center.y;
+
+  graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_context_set_fill_color(ctx, GColorWhite);
-  graphics_fill_circle(ctx, target_center, target_radius);
-  graphics_context_set_stroke_color(ctx, GColorBlack);
-  graphics_draw_circle(ctx, target_center, target_radius);
+
+  graphics_draw_line(ctx, GPoint(bar_left, y), GPoint(bar_right, y));
+
+  // Tick marks at -90, -45, 0, +45, +90 degrees.
+  const int16_t tick_long = 10;
+  const int16_t tick_short = 5;
+  const int16_t offsets[5] = {-90, -45, 0, 45, 90};
+  for (int i = 0; i < 5; ++i) {
+    const int16_t tx = center.x + (int16_t)((half_width * offsets[i]) / 90);
+    const int16_t h = (offsets[i] == 0 || offsets[i] == -90 || offsets[i] == 90) ? tick_long : tick_short;
+    graphics_draw_line(ctx, GPoint(tx, y - h), GPoint(tx, y + h));
+  }
+
+  graphics_fill_circle(ctx, center, 2);
+
+  const int16_t delta_az =
+      prv_normalize_azimuth_delta(s_target.azimuth_deg - prv_corrected_current_azimuth());
+  int16_t dx = (int16_t)((half_width * delta_az) / 90);
+  dx = prv_clamp_int16(dx, -half_width, half_width);
+
+  const uint16_t target_radius = 5;
+  prv_draw_target_dot(ctx, GPoint(center.x + dx, y), target_radius);
+}
+#endif
+
+static void prv_draw_alt_only(GContext *ctx, GRect bounds) {
+  const GPoint center = grect_center_point(&bounds);
+  const int16_t margin = 8;
+  const int16_t bar_top = bounds.origin.y + margin;
+  const int16_t bar_bottom = bounds.origin.y + bounds.size.h - margin;
+  const int16_t half_height = (bar_bottom - bar_top) / 2;
+  const int16_t x = center.x;
+
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_context_set_fill_color(ctx, GColorWhite);
+
+  graphics_draw_line(ctx, GPoint(x, bar_top), GPoint(x, bar_bottom));
+
+  const int16_t tick_long = 10;
+  const int16_t tick_short = 5;
+  const int16_t offsets[5] = {-90, -45, 0, 45, 90};
+  for (int i = 0; i < 5; ++i) {
+    const int16_t ty = center.y - (int16_t)((half_height * offsets[i]) / 90);
+    const int16_t h = (offsets[i] == 0 || offsets[i] == -90 || offsets[i] == 90) ? tick_long : tick_short;
+    graphics_draw_line(ctx, GPoint(x - h, ty), GPoint(x + h, ty));
+  }
+
+  graphics_fill_circle(ctx, center, 2);
+
+  const int16_t delta_alt = s_target.altitude_deg - s_current_altitude_deg;
+  int16_t dy = (int16_t)((-half_height * delta_alt) / 90);
+  dy = prv_clamp_int16(dy, -half_height, half_height);
+
+  const uint16_t target_radius = 5;
+  prv_draw_target_dot(ctx, GPoint(x, center.y + dy), target_radius);
+}
+
+static void prv_draw_crosshair(Layer *layer, GContext *ctx) {
+  const GRect bounds = layer_get_bounds(layer);
+  switch (s_view_mode) {
+#if defined(PBL_COMPASS)
+    case ViewModeAzOnly:
+      prv_draw_az_only(ctx, bounds);
+      return;
+#endif
+    case ViewModeAltOnly:
+      prv_draw_alt_only(ctx, bounds);
+      return;
+    case ViewModeAzAlt:
+    default:
+      prv_draw_az_alt(ctx, bounds);
+      return;
+  }
 }
 
 static void prv_create_grid(TextLayer *grid[GRID_ROWS][GRID_COLS], Layer *parent,
@@ -436,15 +750,39 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(s_calibration_layer));
 
   // Action bar on the right edge.
-  s_light_enabled = false;
+  s_light_mode = LightModeOff;
+#if defined(PBL_COMPASS)
+  s_view_mode = ViewModeAzAlt;
+#else
+  s_view_mode = ViewModeAltOnly;
+#endif
+#if defined(PBL_SPEAKER)
+  s_sound_enabled = false;
+  s_beep_timer = NULL;
+#endif
+
   s_icon_light_on = gbitmap_create_with_resource(RESOURCE_ID_ACTION_LIGHT_ON);
   s_icon_light_off = gbitmap_create_with_resource(RESOURCE_ID_ACTION_LIGHT_OFF);
+#if defined(PBL_RGB_BACKLIGHT)
+  s_icon_light_on_red = gbitmap_create_with_resource(RESOURCE_ID_ACTION_LIGHT_ON_RED);
+#endif
+#if defined(PBL_COMPASS)
+  s_icon_track_az_alt = gbitmap_create_with_resource(RESOURCE_ID_ACTION_TRACK_AZIMUTH_ALTITUDE);
+  s_icon_track_az = gbitmap_create_with_resource(RESOURCE_ID_ACTION_TRACK_AZIMUTH);
+#endif
+  s_icon_track_alt = gbitmap_create_with_resource(RESOURCE_ID_ACTION_TRACK_ALTITUDE);
+#if defined(PBL_SPEAKER)
+  s_icon_volume_mute = gbitmap_create_with_resource(RESOURCE_ID_ACTION_VOLUME_MUTE);
+  s_icon_volume_unmute = gbitmap_create_with_resource(RESOURCE_ID_ACTION_VOLUME_UNMUTE);
+#endif
 
   s_action_bar = action_bar_layer_create();
   action_bar_layer_set_click_config_provider(s_action_bar, prv_click_config_provider);
   action_bar_layer_set_background_color(s_action_bar, PBL_IF_COLOR_ELSE(GColorImperialPurple, GColorBlack));
   action_bar_layer_add_to_window(s_action_bar, s_window);
+  prv_apply_light_mode();
   prv_update_action_icons();
+  prv_apply_view_mode();
 
   prv_update_labels();
 
@@ -469,10 +807,18 @@ static void prv_window_load(Window *window) {
 }
 
 static void prv_window_unload(Window *window) {
-  // Disable light when going back
+#if defined(PBL_SPEAKER)
+  s_sound_enabled = false;
+  prv_beep_stop();
+#endif
+
+  // Reset backlight state when leaving the page.
   light_enable(false);
-  s_light_enabled = false;
-  
+#if defined(PBL_RGB_BACKLIGHT)
+  light_set_system_color();
+#endif
+  s_light_mode = LightModeOff;
+
 #if defined(PBL_COMPASS)
   // Unregister inbox callback
   app_message_register_inbox_received(NULL);
@@ -503,6 +849,36 @@ static void prv_window_unload(Window *window) {
     gbitmap_destroy(s_icon_light_off);
     s_icon_light_off = NULL;
   }
+#if defined(PBL_RGB_BACKLIGHT)
+  if (s_icon_light_on_red) {
+    gbitmap_destroy(s_icon_light_on_red);
+    s_icon_light_on_red = NULL;
+  }
+#endif
+#if defined(PBL_COMPASS)
+  if (s_icon_track_az_alt) {
+    gbitmap_destroy(s_icon_track_az_alt);
+    s_icon_track_az_alt = NULL;
+  }
+  if (s_icon_track_az) {
+    gbitmap_destroy(s_icon_track_az);
+    s_icon_track_az = NULL;
+  }
+#endif
+  if (s_icon_track_alt) {
+    gbitmap_destroy(s_icon_track_alt);
+    s_icon_track_alt = NULL;
+  }
+#if defined(PBL_SPEAKER)
+  if (s_icon_volume_mute) {
+    gbitmap_destroy(s_icon_volume_mute);
+    s_icon_volume_mute = NULL;
+  }
+  if (s_icon_volume_unmute) {
+    gbitmap_destroy(s_icon_volume_unmute);
+    s_icon_volume_unmute = NULL;
+  }
+#endif
   layer_destroy(s_crosshair_layer);
   s_crosshair_layer = NULL;
   text_layer_destroy(s_calibration_layer);
