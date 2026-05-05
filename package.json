@@ -7,7 +7,7 @@
   ],
   "private": true,
   "dependencies": {
-    "@rebble/clay": "^1.0.6",
+    "@rebble/clay": "^1.0.8",
     "astronomy-engine": "^2.1.19",
     "geomagnetism": "^0.2.0"
   },
@@ -25,7 +25,8 @@
       "chalk",
       "diorite",
       "emery",
-      "flint"
+      "flint",
+      "gabbro"
     ],
     "capabilities": [
       "location"
@@ -72,13 +73,33 @@
         },
         {
           "type": "bitmap",
-          "name": "ACTION_VIBRATE_DISABLE",
-          "file": "actions/action_vibrate_disable.png"
+          "name": "ACTION_LIGHT_ON_RED",
+          "file": "actions/action_light_on_red.png"
         },
         {
           "type": "bitmap",
-          "name": "ACTION_VIBRATE_ENABLE",
-          "file": "actions/action_vibrate_enable.png"
+          "name": "ACTION_TRACK_AZIMUTH",
+          "file": "actions/action_track_az.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ACTION_TRACK_ALTITUDE",
+          "file": "actions/action_track_alt.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ACTION_TRACK_AZIMUTH_ALTITUDE",
+          "file": "actions/action_track_az_alt.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ACTION_VOLUME_MUTE",
+          "file": "actions/action_volume_mute.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ACTION_VOLUME_UNMUTE",
+          "file": "actions/action_volume_unmute.png"
         },
         {
           "type": "bitmap",

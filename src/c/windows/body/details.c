@@ -16,7 +16,7 @@
 #define GRID_ROWS 2
 #define GRID_COLS 2
 
-#ifdef PBL_PLATFORM_EMERY
+#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   #define FONT_HEIGHT 28
   #define GRID_ROW_HEIGHT 24
 #else
@@ -32,7 +32,7 @@
 #define LONG_TEXT_TOP_MARGIN 4
 #define LONG_TEXT_SIDE_MARGIN PBL_IF_ROUND_ELSE(0, 4)
 
-#ifdef PBL_PLATFORM_EMERY
+#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   char *title_font_key = FONT_KEY_GOTHIC_24_BOLD;
   char *grid_font_key = FONT_KEY_GOTHIC_24_BOLD;
   char *detail_font_key = FONT_KEY_GOTHIC_24;

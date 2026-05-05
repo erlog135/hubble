@@ -331,7 +331,7 @@ static void prv_window_load(Window *window) {
   // Use corner-based layout with edge padding
   const int16_t padding = PBL_IF_ROUND_ELSE(CORNER_LABEL_PADDING_ROUND, CORNER_LABEL_PADDING_RECT);
   
-  #ifdef PBL_PLATFORM_EMERY
+  #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
     char *font_key = FONT_KEY_GOTHIC_24;
     const int16_t label_height = 28;
   #else
